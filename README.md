@@ -1,57 +1,48 @@
-# CraftSteps — Minecraft-Bauanleitungen
+# CraftSteps – Minecraft-Bauanleitungen
 
-CraftSteps ist eine **eigenständige Minecraft-Bauanleitungs-App**. Das Produkt orientiert sich am leicht verständlichen Bedienkonzept visueller Bauanleitungen, verwendet jedoch eigene Beispielbauwerke und eigene Oberflächenelemente. CraftSteps ist nicht mit WBuilds, Mojang oder Microsoft verbunden.
+CraftSteps ist eine unabhängige Minecraft-Bauanleitungs-App. **Das öffentliche GitHub-Pages-Projekt bietet ab V0.2 einen lokalen Schematic-Importer, keinen Online-Upload-Dienst und keinen abgesicherten Admin-Account.**
 
-## Version 0.1 — Foundation (Demo)
+## V0.2: Minecraft-Bauwerk selbst importieren
 
-In dieser Version enthalten:
+1. Öffne die [CraftSteps-App](https://bot3m-cyber.github.io/CraftSteps/).
+2. Wähle **„Eigenes Bauwerk importieren“**. Alternativ [CraftSteps Studio](https://bot3m-cyber.github.io/CraftSteps/studio.html) aufrufen.
+3. Wähle eine gzip-komprimierte Sponge-`.schem`-Datei **Version 2 oder Version 3**, typischerweise aus der Java-Edition.
+4. Kontrolliere das Ergebnis: Abmessungen, Blockpositionen, vorläufige Materialien, Warnungen.
+5. Wähle Name, Kategorie, Schwierigkeit und maximale Schrittgröße.
+6. Speichere den Bauplan als **privaten lokalen Entwurf**. Er erscheint dann in deiner Galerie, wo du ihn schrittweise durchsehen kannst.
+7. Bereits gespeicherte Entwürfe kannst du im Studio ansehen oder löschen.
 
-- Responsive Bauwerksgalerie mit Suche, Kategorien, Favoriten und Schwierigkeit.
-- Drei originale Beispielbauwerke: Starterhütte, Survival-Garten und Steinwachturm.
-- Detailseiten und automatische Materialberechnung aus definierten X/Y/Z-Blockkoordinaten.
-- Nummerierte Bauanleitung mit roten 3D-Blockumrandungen für **neu** hinzukommende Blöcke.
-- Schrittbezogene Materialliste, Stack-Berechnung und abhaken gesammelter Materialien.
-- Fortschrittsspeicherung je Bauwerk sowie Light/Dark Mode und DE/EN-Oberfläche.
-- Rotation und Zoom der eigenen Canvas-Voxelansicht.
+**Grenzen:** Im aktuellen Prototyp werden `.litematic`, `.schematic` (Legacy), Bedrock-`.mcstructure` und universelle Minecraft-Dateien noch nicht unterstützt. `.schem` maximal 5 MiB komprimiert, 14 MiB unkomprimiert, 24.000 Positionen und 10.000 nicht-Luft-Blöcke. Aktuelle Browser mit `DecompressionStream` und `IndexedDB` nötig. Die importierten Blöcke bleiben im lokalen Browser, nicht in einem Backend.
 
-**Wichtig:** Die Demo-Bauwerke sind in `core.js` programmiert. Ein Import fremder `.schem`-, `.litematic`- oder `.nbt`-Dateien und ein universeller automatischer Anleitungsgenerator sind **noch nicht enthalten**. Aussehen und Materialdarstellung sind vereinfacht; Minecraft-Blockzustände sind nicht für alle Editionen und Versionen vollständig abgebildet.
+Die Materialliste wird zunächst aus den Blockzuständen **vorläufig** abgeleitet. Modblöcke, Doppelteile, Flüssigkeiten und Block-Entities können weitere Prüfungen erfordern. Die „Rohschritte“ sind nach Ebene sortiert und bewusst **nicht als baulich vollständig valide Anleitungen freigegeben**. Es gibt keine automatische Veröffentlichung oder Moderatorfreigabe. Der geschützte Online-Administrationsbereich benötigt eine echte Backend-Authentifizierung und serverseitige Rollen-/Rechteprüfung und folgt erst nach Produktfreigabe und Infrastruktur-Setup.
 
-## Lokal starten
+## V0.1: Galerie + Demo-Bauwerke
 
-Es werden für die App selbst keine npm-Abhängigkeiten benötigt.
+- Drei selbst definierte Beispielbauwerke
+- Mobile Galerie, Kategorien, Suche, Favoriten
+- Materiallisten, Stackanzeige, rot markierte Bauschritte aus echten Koordinaten
+- LocalStorage für Fortschritt und Einstellungen; IndexedDB für importierte Entwürfe
+
+## Entwickeln und testen
 
 ```bash
 python -m http.server 8080
-```
-
-Danach im Browser `http://localhost:8080` öffnen. Für Tests Node.js >=20 verwenden:
-
-```bash
+# Browser: http://localhost:8080
 npm test
 ```
 
-## Projektstruktur
+Der Server ist nur zum Testen nötig, es gibt keine externen Laufzeit-Abhängigkeiten. Node.js >=20. Die CI-Pipeline führt 21 automatisierte Logiktests aus.
 
-| Datei | Inhalt |
+## Aufbau
+
+| Datei | Aufgabe |
 | --- | --- |
-| `index.html` | App-Einstiegspunkt |
-| `styles.css` | Layout, mobile Ansicht und Themes |
-| `core.js` | Demobauwerke, Koordinaten, Schritte und Materiallogik |
-| `app.js` | Navigation, Canvas-Rendering, Interaktionen und Browserdaten |
-| `favicon.svg` | Eigenes App-Symbol |
-| `tests/core.test.js` | 13 automatisierte Tests |
-| `.github/workflows/ci.yml` | Testautomatisierung bei Pull Requests |
-| `.github/workflows/pages.yml` | GitHub Pages nach Freigabe und Merge |
-| `docs/ARCHITEKTUR-UND-ROADMAP.md` | Technischer Umsetzungsplan |
+| `index.html`, `app.js`, `styles.css` | Galerie, Materiallisten, 3D-Voxelvorschau |
+| `core.js` | Blockdaten und Bauanleitungslogik |
+| `studio.html`, `studio.js`, `studio.css` | Importmaske, Prüfung, lokale Entwurfsverwaltung |
+| `schem.js` | Eingabeprüfung, gzip-NBT-Parser und Sponge-v2/v3-Analyse |
+| `draft-store.js` | Browser-lokale IndexedDB-Persistenz |
+| `tests/*.test.js` | Unit-Tests für Material- und Importfunktionen |
+| `docs/IMPORT-ROADMAP.md` | Bestehende Grenzen und zukünftige Backend-Roadmap |
 
-## Veröffentlichung
-
-Die GitHub-Pages-Action ist für `main` vorbereitet und wird **erst nach Merge** ausgeführt. GitHub Pages muss unter **Settings → Pages → Build and deployment → Source: GitHub Actions** aktiviert sein.
-
-Das Repository ist derzeit **privat**. Bei einem persönlichen GitHub-Free-Konto lässt sich Pages nur mit einem **öffentlichen** Repository verwenden; GitHub Pro unterstützt Pages auch bei privaten Repositories. **CraftSteps wird nicht eigenständig öffentlich gestellt.** Eine Veröffentlichung oder Änderung der Repository-Sichtbarkeit wird erst nach Zustimmung des Projektinhabers durchgeführt.
-
-## Datenschutz und Abgrenzung
-
-Fortschritt, Favoriten und Einstellungen werden in der Demo lokal im Browser (`localStorage`) gespeichert; es gibt keine Nutzerkonten und keine Cloud-Synchronisierung. Keine fremden WBuilds-Bilder, Markenmaterialien oder Baupläne wurden übernommen.
-
-Mehr zur nächsten Entwicklungsphase: [Architektur und Roadmap](docs/ARCHITEKTUR-UND-ROADMAP.md).
+**Sicherheit:** Keine geheimen Zugangsdaten in GitHub Pages! Es wird kein öffentliches Administratorkennwort im Browser gespeichert. Die Importmaske kann jeder öffnen, aber die daraus resultierenden Entwürfe sind ausschließlich lokal sichtbar. Öffentliches Teilen erfordert eine spätere sichere Serverfunktion. CraftSteps gehört nicht zu WBuilds, Mojang oder Microsoft.

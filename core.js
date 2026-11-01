@@ -59,8 +59,8 @@
     return steps;
   }
   function itemCountForBlock(b) {
-    if(!MATERIALS[b.type]?.inventory) return MATERIALS[b.type]?.inventory === false ? 0 : b.part==='upper'?0:1;
-    return b.part==='upper'?0:1;
+    if(!MATERIALS[b.type]?.inventory) return MATERIALS[b.type]?.inventory === false ? 0 : (b.part==='upper'||b.part==='head')?0:1;
+    return (b.part==='upper'||b.part==='head')?0:1;
   }
   function countMaterials(blocks){
     const counts={};
