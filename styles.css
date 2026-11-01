@@ -6,3 +6,14 @@
 
 /* CraftSteps Studio entry and browser-private draft warnings */
 .import-entry{display:flex;align-items:center;gap:10px;justify-content:space-between;text-decoration:none;border:1px solid var(--line);border-radius:14px;background:var(--soft);color:var(--ink);padding:14px 16px;margin:16px 0;font-weight:750;font-size:13px}.import-entry .ui-icon{flex-shrink:0}.import-entry span{margin-left:auto}.import-entry:hover{border-color:var(--muted)}.draft-notice{margin:14px 0;border-radius:13px;padding:14px;background:#fff5df;color:#624b25;border:1px solid #f0d9a8;font-size:12px;line-height:1.6}.draft-notice p{margin:6px 0}.draft-notice a{color:#4b6433;font-weight:750}.draft-banner{padding:11px;border-radius:12px;background:#fff5df;color:#684e18;font-weight:650;font-size:12px;text-align:center}
+
+/* CraftSteps v0.3 block icons, state information and draggable 3D viewing */
+canvas.mat-icon{width:39px!important;height:39px!important;flex:0 0 39px!important;border:1px solid var(--line);border-radius:7px;background:linear-gradient(145deg,#e5e9df,#c9d3c3);image-rendering:pixelated;box-shadow:none!important;display:block}
+.step-item canvas.mat-icon,.coordinate-item canvas.mat-icon{width:34px!important;height:34px!important;flex-basis:34px!important}
+.guide-image .voxel,.detail-hero .voxel{touch-action:none;cursor:grab}
+.guide-image .voxel:active,.detail-hero .voxel:active{cursor:grabbing}
+.coordinate-card{border:1px solid var(--line);background:var(--panel);border-radius:13px;padding:13px;margin:12px 0 14px}
+.coordinate-card>strong{display:block;font-size:13px;margin-bottom:8px}
+.coordinate-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;max-height:290px;overflow:auto}
+.coordinate-item{display:flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:6px}
+.coordinate-item span{min-width:0}.coordinate-item strong{display:block;font-size:12px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.coordinate-item small{font-size:10px;color:var(--muted);display:block;overflow-wrap:anywhere}
