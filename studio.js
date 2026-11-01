@@ -1,12 +1,12 @@
 /* CraftSteps Studio v0.2: browser-local file validation, preview, and private drafts. */
 (function(){
 'use strict';
-const importer=window.CraftStepsSchem,core=window.CraftStepsCore,store=window.CraftStepsDrafts;
+const importer=window.CraftStepsSchem,core=window.CraftStepsCore,store=window.CraftStepsDrafts,visuals=window.CraftStepsVisuals;
 const status=document.querySelector('#studio-status'),preview=document.querySelector('#preview');
-let parsed=null,loading=false;
+let parsed=null,loading=false,viewYaw=Math.PI/4,viewPitch=.58;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function report(message,cls=''){status.className='studio-status '+cls;status.textContent=message;}
-function nameFromFile(filename){return filename.replace(/\.schem$/i,'').replace(/[_-]/g,' ').slice(0,70)||'Mein Minecraft-Bauwerk';}
+function nameFromFile(filename){return filename.replace(/\.(schem|litematic|schematic)$/i,'').replace(/[_-]/g,' ').slice(0,70)||'Mein Minecraft-Bauwerk';}
 function getForm(){const name=document.querySelector('#draft-name'),cat=document.querySelector('#draft-category'),diff=document.querySelector('#draft-difficulty'),size=document.querySelector('#draft-size');return {name:name?.value,category:cat?.value,difficulty:diff?.value,maxPerStep:Number(size?.value)};}
 function svgCellCanvas(){const canvas=document.querySelector('#plan-preview');if(!canvas||!parsed)return;
  const ratio=Math.min(window.devicePixelRatio||1,2),rect=canvas.getBoundingClientRect(),width=Math.max(250,rect.width),height=Math.max(170,rect.height),ctx=canvas.getContext('2d');
@@ -28,14 +28,16 @@ async function renderDrafts(){
    list.innerHTML=items.slice().reverse().map(b=>`<div class="studio-draft-row"><div><strong>${esc(b.name)}</strong><p>${b.blocks.length} Blockpositionen · ${b.steps.length} Rohschritte · Privat</p></div><div class="studio-draft-buttons"><a class="studio-btn secondary" href="index.html#${encodeURIComponent(b.id)}">Ansehen</a><button class="studio-btn secondary" data-delete="${esc(b.id)}">Löschen</button></div></div>`).join('');
  }catch(error){list.innerHTML=`<p class="studio-muted">Entwürfe konnten nicht geladen werden: ${esc(error.message)}</p>`;}
 }
+function drawPreviews(){svgCellCanvas();const canvas=document.querySelector('#import-3d');if(canvas&&window.__craftstepsPreviewDraft)visuals?.draw(canvas,window.__craftstepsPreviewDraft,{yaw:viewYaw,pitch:viewPitch,zoom:1,limit:4000,context:'preview'});visuals?.drawIcons(document);}
 function renderPreview(filename){if(!parsed)return;
  const draft=importer.draftFromParsed(parsed,nameFromFile(filename));
+ window.__craftstepsPreviewDraft=draft;
  const counts=Object.entries(core.countMaterials(draft.blocks)).sort((a,b)=>b[1]-a[1]);
  const unique=counts.length;
  preview.hidden=false;
- preview.innerHTML=`<div class="studio-section-title"><h2>2. Import überprüfen</h2><span class="studio-pill">Sponge V${parsed.version} · Java</span></div>
+ preview.innerHTML=`<div class="studio-section-title"><h2>2. Import überprüfen</h2><span class="studio-pill">${esc(parsed.format)} · Java</span></div>
  <div class="studio-metrics"><div class="studio-metric"><strong>${parsed.blocks.length.toLocaleString('de')}</strong><small>Blockpositionen</small></div><div class="studio-metric"><strong>${parsed.width} × ${parsed.height} × ${parsed.length}</strong><small>Abmessungen</small></div><div class="studio-metric"><strong>${unique}</strong><small>Materialtypen</small></div></div>
- <div class="studio-grid"><div><canvas id="plan-preview" class="studio-canvas" role="img" aria-label="Draufsicht der importierten Blockpositionen"></canvas><p class="studio-muted">Vorläufige Draufsicht. Die vollständige 3D-Bauansicht findest du nach dem Speichern in der Galerie.</p></div><div class="studio-summary"><h3>Vorläufige Materialien</h3>${counts.slice(0,14).map(([key,count])=>`<div class="studio-material"><span><span class="studio-swatch" style="background:${esc(core.MATERIALS[key]?.hex||'#888')}"></span>${esc(core.MATERIALS[key]?.de||key)}</span><strong>×${count}</strong></div>`).join('')}${counts.length>14?`<p class="studio-muted">+ ${counts.length-14} weitere Materialtypen</p>`:''}<p class="studio-caution">Mengen sind vorläufig. Inventargegenstände und Sonderfälle müssen noch überprüft werden.</p></div></div>
+ <div class="studio-grid"><div><div class="studio-3d-wrap"><canvas id="import-3d" class="studio-3d-canvas" role="img" aria-label="Dreidimensionale Ansicht deines importierten Bauwerks"></canvas><span class="studio-3d-label">3D · Ziehen zum Drehen</span></div><canvas id="plan-preview" class="studio-canvas" role="img" aria-label="Draufsicht der importierten Blockpositionen"></canvas><p class="studio-muted">Oben: drehbare 3D-Vorschau · unten: Draufsicht. Originale Pixeltexturen; komplexe Blockstates sind teilweise vereinfacht.</p></div><div class="studio-summary"><h3>Vorläufige Materialien</h3>${counts.slice(0,14).map(([key,count])=>`<div class="studio-material"><span><canvas class="mat-icon" data-mat-icon="${esc(key)}" width="48" height="48" aria-hidden="true"></canvas>${esc(core.MATERIALS[key]?.de||key)}</span><strong>×${count}</strong></div>`).join('')}${counts.length>14?`<p class="studio-muted">+ ${counts.length-14} weitere Materialtypen</p>`:''}<p class="studio-caution">Mengen sind vorläufig. Inventargegenstände und Sonderfälle müssen noch überprüft werden.</p></div></div>
  <div class="studio-warnings"><h3>Hinweise zum Import</h3><ul>${parsed.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>
  <div class="studio-section-title"><h2>3. Privaten Entwurf anlegen</h2></div>
  <form id="draft-form" class="studio-form"><div class="studio-field wide"><label for="draft-name"><strong>Name</strong></label><input id="draft-name" maxlength="70" required value="${esc(nameFromFile(filename))}"/></div>
@@ -43,10 +45,10 @@ function renderPreview(filename){if(!parsed)return;
  <div class="studio-field"><label for="draft-difficulty"><strong>Schwierigkeit</strong></label><select id="draft-difficulty"><option>Leicht</option><option selected>Mittel</option><option>Schwer</option></select></div>
  <div class="studio-field wide"><label for="draft-size"><strong>Maximale Blöcke pro Rohschritt</strong><small>1–32 · Die automatische Reihenfolge ist noch nicht bautechnisch geprüft.</small></label><input id="draft-size" type="number" min="1" max="32" step="1" value="9" required/></div>
  <div class="wide studio-actions"><button class="studio-btn" type="submit" id="save-draft">Privaten Entwurf speichern</button><span class="studio-muted">Das Bauwerk wird lokal im aktuellen Browser gespeichert, nicht öffentlich hochgeladen.</span></div></form>`;
- requestAnimationFrame(svgCellCanvas);
+ requestAnimationFrame(drawPreviews);
 }
 async function handleImport(file){if(!file)return;loading=true;parsed=null;preview.hidden=true;report('Importiere und prüfe die Blockdaten …');
- try{const result=await importer.parseSchemFile(file);parsed=result;renderPreview(file.name);report('Datei erfolgreich analysiert. Bitte Hinweise prüfen und als privaten Entwurf speichern.','good');}
+ try{const result=await importer.parseBlueprintFile(file);parsed=result;renderPreview(file.name);report('Datei erfolgreich analysiert. Bitte Hinweise prüfen und als privaten Entwurf speichern.','good');}
  catch(error){parsed=null;report('Import fehlgeschlagen: '+error.message,'error');}
  finally{loading=false;}
 }
@@ -58,6 +60,7 @@ async function onSave(){if(!parsed||loading)return;const fields=getForm();if(!fi
 document.querySelector('#schem-file').addEventListener('change',e=>{void handleImport(e.target.files?.[0]);});
 document.addEventListener('submit',e=>{if(e.target.id==='draft-form'){e.preventDefault();void onSave();}});
 document.addEventListener('click',e=>{const button=e.target.closest('[data-delete]');if(!button)return;const id=button.dataset.delete;if(!confirm('Diesen lokalen Entwurf wirklich löschen?'))return;void store.remove(id).then(()=>{report('Entwurf gelöscht.','good');return renderDrafts();}).catch(err=>report('Löschen fehlgeschlagen: '+err.message,'error'));});
-window.addEventListener('resize',()=>requestAnimationFrame(svgCellCanvas));
+window.addEventListener('resize',()=>requestAnimationFrame(drawPreviews));
+let rotating=null;document.addEventListener('pointerdown',e=>{if(e.target.id!=='import-3d')return;rotating={pointer:e.pointerId,x:e.clientX,y:e.clientY};e.target.setPointerCapture?.(e.pointerId);});document.addEventListener('pointermove',e=>{if(!rotating||rotating.pointer!==e.pointerId)return;viewYaw+=(e.clientX-rotating.x)*.014;viewPitch=Math.min(1.33,Math.max(.24,viewPitch+(e.clientY-rotating.y)*.009));rotating.x=e.clientX;rotating.y=e.clientY;drawPreviews();});for(const name of ['pointerup','pointercancel'])document.addEventListener(name,()=>{rotating=null;});
 void renderDrafts();
 })();

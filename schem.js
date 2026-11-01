@@ -138,6 +138,110 @@
     }catch(e){if(e.message?.includes('überschreitet'))throw e;fail('Die gzip-Datei ist beschädigt oder unlesbar.');}
     return parseSchemBytes(output);
   }
+  // Litematica stores region palettes and a packed 64-bit index stream.
+  // We parse all regions, preserve state strings, and normalize negative world coordinates.
+  function parseLitematicBytes(raw){
+    const tree=new NbtReader(raw).parse();
+    if(!tree.Regions||typeof tree.Regions!=='object'||Array.isArray(tree.Regions))fail('Keine Litematica-Regionen gefunden.');
+    const names=Object.keys(tree.Regions);if(!names.length||names.length>64)fail('Ungültige Anzahl Litematica-Regionen.');
+    const all=[];const occupied=new Set(),warnings=[];let cellTotal=0;
+    function axisObject(obj){if(!obj||!['x','y','z'].every(k=>Number.isInteger(obj[k.toUpperCase()])))fail('Ungültige Position oder Größe einer Litematica-Region.');return [obj.X,obj.Y,obj.Z];}
+    for(const regionName of names){
+      const r=tree.Regions[regionName],pos=axisObject(r?.Position),size=axisObject(r?.Size),dims=size.map(Math.abs);
+      if(!dims.every(n=>n>=1&&n<=65535))fail('Ungültige Region-Abmessungen.');
+      const volume=dims[0]*dims[1]*dims[2];cellTotal+=volume;
+      if(!Number.isSafeInteger(volume)||cellTotal>MAX_VOLUME)fail('Dieser Litematica-Plan ist für die Vorschau zu groß.');
+      const palette=r.BlockStatePalette,packed=r.BlockStates;
+      if(!Array.isArray(palette)||!palette.length||palette.length>MAX_ENTRIES||!Array.isArray(packed))fail('Litematica-Palette oder BlockStates fehlen.');
+      const states=palette.map((entry)=>{
+        if(!entry||typeof entry.Name!=='string')fail('Ungültiger Block in der Litematica-Palette.');
+        const prop=entry.Properties&&typeof entry.Properties==='object'?entry.Properties:{};
+        const props=Object.entries(prop).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`${k}=${v}`).join(',');
+        return parseState(entry.Name+(props?'['+props+']':''));
+      });
+      const bits=Math.max(2,Math.ceil(Math.log2(palette.length)));const required=Math.ceil(volume*bits/64);
+      if(packed.length<required)fail('Abgeschnittene Litematica-BlockStates.');
+      if(packed.length>required+1)fail('Überlange Litematica-BlockStates.');
+      const word=(n)=>BigInt.asUintN(64,packed[n]||0n),mask=(1n<<BigInt(bits))-1n;
+      for(let i=0;i<volume;i++){
+        const at=i*bits,offset=at%64,part=Math.floor(at/64);let idx=(word(part)>>BigInt(offset))&mask;
+        if(offset+bits>64)idx=((word(part)>>BigInt(offset))|(word(part+1)<<BigInt(64-offset)))&mask;
+        const state=states[Number(idx)];if(!state)fail('Litematica-Index außerhalb der Palette.');
+        if(/minecraft:(?:air|cave_air|void_air)$/.test(state.name))continue;
+        if(all.length>=MAX_BLOCKS)fail('Zu viele sichtbare Blöcke (maximal 10.000).');
+        const x=i%dims[0],z=Math.floor(i/dims[0])%dims[2],y=Math.floor(i/(dims[0]*dims[2]));
+        const coords=[x,y,z].map((n,j)=>pos[j]+(size[j]<0?-n:n));
+        const coordKey=coords.join('|');if(occupied.has(coordKey))fail('Litematica-Regionen überlappen sich an Blockpositionen.');
+        occupied.add(coordKey);
+        all.push({x:coords[0],y:coords[1],z:coords[2],type:state.name.startsWith('minecraft:')?state.type:state.name,blockId:state.name,blockState:state.raw,properties:state.properties});
+      }
+      if(Array.isArray(r.TileEntities)&&r.TileEntities.length)warnings.push(`Region ${regionName}: Truheninhalte / BlockEntities werden nicht übernommen.`);
+      if(Array.isArray(r.Entities)&&r.Entities.length)warnings.push(`Region ${regionName}: Entity-Daten werden ignoriert.`);
+    }
+    if(!all.length)fail('Der Bauplan enthält nur Luftblöcke.');
+    const min=[Math.min(...all.map(b=>b.x)),Math.min(...all.map(b=>b.y)),Math.min(...all.map(b=>b.z))],
+      max=[Math.max(...all.map(b=>b.x)),Math.max(...all.map(b=>b.y)),Math.max(...all.map(b=>b.z))];
+    all.forEach(b=>{b.x-=min[0];b.y-=min[1];b.z-=min[2];});
+    const dims=[max[0]-min[0]+1,max[1]-min[1]+1,max[2]-min[2]+1];
+    if(dims.some(d=>d>512)||dims.reduce((a,b)=>a*b,1)>MAX_VOLUME)fail('Zusammengesetzte Litematica-Regionen sind zu weit auseinander.');
+    if(!Number.isInteger(tree.MinecraftDataVersion||tree.Metadata?.MinecraftDataVersion))warnings.push('Minecraft DataVersion fehlt; Blockstates müssen geprüft werden.');
+    warnings.push('Auto-Schritte sind Rohschritte, nicht automatisch auf Platzierbarkeit geprüft.');
+    warnings.push('Eigene/Mod-Blockstates können als kariertes Platzhaltermodell erscheinen.');
+    return {format:'Litematica .litematic',version:tree.Version||'unbekannt',dataVersion:tree.MinecraftDataVersion||tree.Metadata?.MinecraftDataVersion||0,width:dims[0],height:dims[1],length:dims[2],volume:cellTotal,blocks:all,warnings,offset:min,rawPaletteSize:0};
+  }
+  // Legacy MCEdit/WorldEdit .schematic uses numeric block IDs + metadata, not modern blockstate JSON.
+  // Unknown IDs intentionally remain explicit placeholders; never silently map them to stone.
+  const LEGACY_IDS={
+    1:'stone',2:'grass_block',3:'dirt',4:'cobblestone',5:'oak_planks',7:'bedrock',8:'water',9:'water',10:'lava',11:'lava',12:'sand',13:'gravel',14:'gold_ore',15:'iron_ore',16:'coal_ore',17:'oak_log',18:'oak_leaves',20:'glass',24:'sandstone',35:'white_wool',41:'gold_block',42:'iron_block',43:'stone_slab',44:'stone_slab',45:'bricks',47:'bookshelf',48:'mossy_cobblestone',49:'obsidian',50:'torch',53:'oak_stairs',54:'chest',56:'diamond_ore',57:'diamond_block',58:'crafting_table',60:'farmland',61:'furnace',62:'furnace',64:'oak_door',65:'ladder',67:'cobblestone_stairs',79:'ice',80:'snow_block',85:'oak_fence',89:'glowstone',98:'stone_bricks',102:'glass_pane',108:'brick_stairs',109:'stone_brick_stairs',112:'nether_bricks',114:'nether_brick_stairs',126:'oak_slab',128:'sandstone_stairs',134:'spruce_stairs',135:'birch_stairs',136:'jungle_stairs',155:'quartz_block',156:'quartz_stairs',159:'white_terracotta',160:'white_stained_glass_pane',162:'acacia_log',163:'acacia_stairs',164:'dark_oak_stairs',171:'white_carpet',172:'hardened_clay',173:'coal_block',179:'red_sandstone',180:'red_sandstone_stairs',182:'red_sandstone_slab',188:'spruce_fence',189:'birch_fence',190:'jungle_fence',191:'dark_oak_fence',192:'acacia_fence',251:'white_concrete',252:'white_concrete_powder'};
+  function parseLegacyBytes(raw){
+    const tree=new NbtReader(raw).parse();const width=tree.Width,height=tree.Height,length=tree.Length;
+    if(![width,height,length].every(n=>Number.isInteger(n)&&n>0&&n<=65535))fail('Ungültige Legacy-Schematic-Abmessungen.');
+    const volume=width*height*length;if(volume>MAX_VOLUME)fail('Diese Schematic ist für die Vorschau zu groß.');
+    const ids=tree.Blocks,meta=tree.Data,add=tree.AddBlocks;
+    if(!(ids instanceof Uint8Array)||ids.length!==volume||!(meta instanceof Uint8Array)||meta.length!==volume)fail('Legacy-Schematic-Blöcke oder Data fehlen / haben falsche Länge.');
+    if(add!==undefined&&(!(add instanceof Uint8Array)||add.length!==Math.ceil(volume/2)))fail('Ungültige AddBlocks-Daten.');
+    const blocks=[],unknown=new Set();
+    for(let i=0;i<volume;i++){
+      const high=add?((i%2?add[Math.floor(i/2)]>>4:add[Math.floor(i/2)]&15)<<8):0;
+      const id=ids[i]+high;if(id===0)continue;
+      if(blocks.length>=MAX_BLOCKS)fail('Zu viele sichtbare Blöcke (maximal 10.000).');
+      let type=LEGACY_IDS[id];if(!type){type=`unknown_legacy_${id}`;unknown.add(id);}
+      const metadata=meta[i],props=Object.create(null);
+      // These simple metadata fields are known; other legacy metadata stays explicitly unverified.
+      if(/_stairs$/.test(type)){props.facing=['east','west','south','north'][metadata&3];props.half=(metadata&4)?'top':'bottom';}
+      if(/_slab$/.test(type))props.type=id===43||(metadata&8)?'top':'bottom';
+      if(/_door$/.test(type))props.half=(metadata&8)?'upper':'lower';
+      if(/_log$/.test(type))props.axis=['y','x','z','y'][(metadata>>2)&3];
+      const x=i%width,z=Math.floor(i/width)%length,y=Math.floor(i/(width*length));
+      const entry={x,y,z,type,blockId:`minecraft:${type}`,blockState:`minecraft:${type}`,properties:props,legacyId:id,legacyMeta:metadata};
+      blocks.push(entry);
+    }
+    if(!blocks.length)fail('Der Bauplan enthält nur Luftblöcke.');
+    const warnings=['Legacy .schematic verwendet alte numerische IDs: Palette, Materialliste und Blockstates sind teilweise nur näherungsweise rekonstruierbar.','Manche Sonderblöcke und mehrteilige Blockstates müssen vor Verwendung geprüft werden.'];
+    if(unknown.size)warnings.unshift('Nicht zugeordnete Legacy-Block-IDs: '+[...unknown].slice(0,35).join(', ')+(unknown.size>35?' …':'')+'. Sie erscheinen als pinkes Platzhaltermodell.');
+    if(Array.isArray(tree.TileEntities)&&tree.TileEntities.length)warnings.push('BlockEntity-Inhalte werden ignoriert.');
+    return {format:'Legacy .schematic',version:1,dataVersion:0,width,height,length,volume,blocks,warnings,offset:[0,0,0],rawPaletteSize:0};
+  }
+  async function parseBlueprintFile(file){
+    if(!file||!/^.+\.(schem|litematic|schematic)$/i.test(file.name||''))fail('Unterstützt: .schem, .litematic und .schematic.');
+    if(file.size>MAX_COMPRESSED)fail('Datei zu groß (maximal 5 MiB).');
+    const bytes=new Uint8Array(await file.arrayBuffer());if(bytes.length<2)fail('Datei ist leer oder ungültig.');
+    let output=bytes;
+    if(bytes[0]===0x1f&&bytes[1]===0x8b){
+      if(typeof DecompressionStream!=='function')fail('Dein Browser unterstützt gzip-Import nicht.');
+      try{
+        const reader=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')).getReader();
+        const parts=[];let size=0;while(true){const chunk=await reader.read();if(chunk.done)break;size+=chunk.value.byteLength;
+          if(size>MAX_UNCOMPRESSED){await reader.cancel();fail('Die entpackte Datei überschreitet 14 MiB.');}parts.push(chunk.value);}
+        output=new Uint8Array(size);let n=0;for(const part of parts){output.set(part,n);n+=part.length;}
+      }catch(e){if(e.message?.includes('überschreitet'))throw e;fail('Die gzip-Datei ist beschädigt oder unlesbar.');}
+    }else if(!/\.schematic$/i.test(file.name))fail('Die Datei muss gzip-komprimiert sein.');
+    if(output.length>MAX_UNCOMPRESSED)fail('Die entpackte Datei ist zu groß.');
+    if(/\.schem$/i.test(file.name))return parseSchemBytes(output);
+    if(/\.litematic$/i.test(file.name))return parseLitematicBytes(output);
+    return parseLegacyBytes(output);
+  }
+
   function materialColor(type){let h=2166136261;for(let i=0;i<type.length;i++)h=Math.imul(h^type.charCodeAt(i),16777619);let hue=(h>>>0)%360;const c=(offset)=>Math.round(85+105*(.5+.5*Math.sin((hue+offset)*Math.PI/180))).toString(16).padStart(2,'0');return `#${c(0)}${c(120)}${c(240)}`;}
   function registerMaterials(build,materialMap){
     for(const block of build.blocks){
@@ -157,7 +261,7 @@
       const doorPart=multipart&&props.half==='upper'?'upper':null;
       const bedPart=/_bed$/.test(b.type)&&props.part==='head'?'head':null;
       const groupId=multipart?`double:${b.x}:${b.y-(doorPart?1:0)}:${b.z}`:null;
-      return {x:b.x,y:b.y,z:b.z,type:b.type,blockState:b.blockState,blockId:b.blockId,phase:Math.max(0,b.y-(doorPart?1:0)),part:doorPart||bedPart,atomicId:groupId};
+      return {x:b.x,y:b.y,z:b.z,type:b.type,blockState:b.blockState,properties:b.properties,blockId:b.blockId,phase:Math.max(0,b.y-(doorPart?1:0)),part:doorPart||bedPart,atomicId:groupId};
     });
     const id='local-'+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
     const draft={id,name:safeName,description:'Lokaler Import-Entwurf – Materialregeln und Bauschritte müssen noch geprüft werden.',category:'Häuser',difficulty:'Mittel',width:parsed.width,depth:parsed.length,height:parsed.height,blocks,steps:core.generateSteps(blocks,maxPerStep),tags:['importiert'],editions:['Java'],version:'DataVersion '+parsed.dataVersion,updated:new Date().toISOString().slice(0,10),author:'Lokaler Entwurf',verified:'NICHT geprüft',draft:true,importFormat:`${parsed.format} v${parsed.version}`,warnings:[...parsed.warnings],maxPerStep};
@@ -165,5 +269,5 @@
     core.validateBuild(draft);
     return draft;
   }
-  return {MAX_COMPRESSED,MAX_UNCOMPRESSED,MAX_VOLUME,MAX_BLOCKS,parseSchemBytes,parseSchemFile,decodeVarints,parseState,registerMaterials,draftFromParsed};
+  return {MAX_COMPRESSED,MAX_UNCOMPRESSED,MAX_VOLUME,MAX_BLOCKS,parseSchemBytes,parseSchemFile,parseLitematicBytes,parseLegacyBytes,parseBlueprintFile,decodeVarints,parseState,registerMaterials,draftFromParsed};
 });
