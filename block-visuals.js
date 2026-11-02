@@ -243,7 +243,7 @@
     if(!ready&&!opts.icon&&(opts.context==='guide'||opts.context==='hero')){
       // Do not disguise untextured placeholders as actual Minecraft blocks.
       const label='ORIGINALTEXTUREN NICHT GELADEN',sub='Minecraft-Java-Datei oben auswählen';
-      ctx.save();ctx.font='bold 11px system-ui,sans-serif';const width=Math.min(w-20,Math.max(205,ctx.measureText(label).width+24));
+      ctx.save();ctx.font='bold 11px system-ui,sans-serif';const width=Math.min(w-20,Math.max(205,(typeof ctx.measureText==='function'?ctx.measureText(label).width:label.length*7)+24));
       ctx.fillStyle='rgba(19,30,26,.92)';ctx.fillRect(10,10,width,51);
       ctx.fillStyle='#fff';ctx.fillText(label,19,30);ctx.font='10px system-ui,sans-serif';ctx.fillStyle='#dfece3';ctx.fillText(sub,19,47);
       ctx.restore();
