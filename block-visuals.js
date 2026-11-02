@@ -1,6 +1,5 @@
-/* CraftSteps Visuals v0.3 — original 16×16 pixel textures and geometry from blockstates.
- * Deliberately contains NO Mojang game textures. Pure Canvas 2D software 3D renderer.
- * State support is incremental; unknown blocks have a visible fallback, never a random color.
+/* CraftSteps Visuals v0.4 — official vanilla assets are read ONLY from a user-selected local Java client JAR.
+ * The project does not distribute any Mojang textures. Missing assets are neutral placeholders.
  */
 (function (root, factory) {
   const api = factory();
@@ -8,7 +7,7 @@
   if (root) root.CraftStepsVisuals = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const tileCache = new Map();
+  const assets = () => (typeof globalThis !== 'undefined' ? globalThis.CraftStepsAssets?.manager : null);
   const PI = Math.PI;
   const mathClamp = (a, min, max) => Math.min(max, Math.max(min, a));
   const rawName = block => String(block?.blockId || block?.type || 'unknown').replace(/^minecraft:/, '').split('[')[0].replace(/^[^:]+:/, 'mod_');
@@ -19,8 +18,6 @@
     if (found) for (const item of found[1].split(',')) { const [key, value] = item.split('='); if (key && value) props[key] = value; }
     return props;
   }
-  const hash = (x, y, seed) => { let h = Math.imul(x + 17, 374761393) ^ Math.imul(y + 29, 668265263) ^ seed; h = Math.imul(h ^ h >>> 13, 1274126177); return (h ^ h >>> 16) >>> 0; };
-  const hashText = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
   function styleOf(type) {
     type = String(type).replace(/^minecraft:/, '').toLowerCase();
     if(type.startsWith('mod_')||type.startsWith('unknown_legacy_'))return 'unknown';
@@ -47,60 +44,8 @@
     if (/^air$|cave_air|void_air/.test(type)) return 'air';
     return 'unknown';
   }
-  const COLORS = {
-    cobble:[124,126,125],stone:[131,136,138],bricks:[150,145,142],planks:[171,129,78],log:[103,77,52],
-    leaves:[69,133,51],moss:[87,123,61],grass:[102,155,69],dirt:[120,88,58],sand:[210,189,133],
-    snow:[219,230,229],hay:[209,175,68],glass:[167,209,218],water:[55,126,206],lava:[229,109,37],
-    light:[240,181,73],fabric:[157,109,102],metal:[153,161,168],unknown:[214,67,185],air:[0,0,0]
-  };
-  function colorFor(type, face = 'side') {
-    const t = String(type).replace(/^minecraft:/, ''); let kind=styleOf(t), rgb=COLORS[kind]||COLORS.unknown;
-    if (/spruce|dark_oak/.test(t) && (kind==='planks'||kind==='log')) rgb=[113,80,52];
-    if (/birch|bamboo|sandstone/.test(t) && (kind==='planks'||kind==='log')) rgb=[210,188,133];
-    if (/cherry/.test(t) && (kind==='planks'||kind==='log')) rgb=[188,135,132];
-    if (/mangrove|crimson|red_nether/.test(t) && (kind==='planks'||kind==='log')) rgb=[135,67,65];
-    if (/warped/.test(t) && (kind==='planks'||kind==='log')) rgb=[52,135,127];
-    if (/deepslate|blackstone/.test(t)) rgb=[71,76,81];
-    if (/mossy/.test(t)) rgb=[99,127,92];
-    if (/red_sand/.test(t)) rgb=[191,109,69];
-    if (/quartz|snow|white_/.test(t) && kind!=='unknown') rgb=[225,225,219];
-    if (/red_wool|red_concrete/.test(t)) rgb=[168,57,57];
-    if (/blue_wool|blue_concrete/.test(t)) rgb=[68,91,175];
-    if (/green_wool|green_concrete/.test(t)) rgb=[75,128,69];
-    if (/yellow_wool|yellow_concrete/.test(t)) rgb=[216,173,66];
-    if (/oak_leaves/.test(t)) rgb=[81,142,59];
-    if (kind==='grass'&&face==='top') rgb=[93,168,68];
-    if (kind==='grass'&&face!=='top') rgb=[121,92,65];
-    if (kind==='log'&&face==='top') rgb=rgb.map((n,i)=>Math.min(255,n+[55,46,33][i]));
-    return rgb;
-  }
-  function tint(rgb, delta) { return rgb.map(x=>mathClamp(Math.round(x+delta),0,255)); }
-  function tile(type, face = 'side') {
-    if (typeof document==='undefined') return null;
-    const key=type+'|'+face;
-    if (tileCache.has(key)) return tileCache.get(key);
-    const c=document.createElement('canvas');c.width=c.height=16;
-    const ctx=c.getContext('2d');if(!ctx)return null;
-    const img=ctx.createImageData(16,16),style=styleOf(type),base=colorFor(type,face),seed=hashText(type);
-    for(let y=0;y<16;y++)for(let x=0;x<16;x++){
-      const n=hash(x,y,seed)%37-18;let d=n*.62;
-      if(style==='planks'){d=(Math.floor(y/4)%2?-6:8)+(y%4===0?-28:0)+(hash(Math.floor(x/3),y,seed)%11-5);}
-      if(style==='bricks'){const row=Math.floor(y/4), xx=(x+(row%2)*4)%8;d=y%4===0||xx===0?-37:Math.floor((hash(Math.floor(x/3),Math.floor(y/3),seed)%27)-12);}
-      if(style==='cobble'){const row=Math.floor(y/5),xx=(x+(row%2)*3)%6;d=(y%5===0||xx===0)?-39:(hash(Math.floor(x/4),Math.floor(y/4),seed)%39-18);}
-      if(style==='log'){if(face==='top'){const ring=Math.floor(Math.max(Math.abs(x-7.5),Math.abs(y-7.5))/2);d=(ring%2===0?17:-25)+n*.2;}else{d=x%5===0?-28:((Math.floor(x/2)%2)?6:-7)+n*.5;}}
-      if(style==='grass'&&face==='side'&&y<3){const leafy=[97,163,68];for(let k=0;k<3;k++)img.data[(y*16+x)*4+k]=mathClamp(leafy[k]+n,0,255);img.data[(y*16+x)*4+3]=255;continue;}
-      if(style==='leaves'){d=(hash(Math.floor(x/2),Math.floor(y/2),seed)%65)-30;}
-      if(style==='sand'||style==='fabric'){d=n*.37;}
-      if(style==='metal'){d=x%5===0?-23:(y%5===0?-14:n*.25);}
-      if(style==='light'){d=(x>3&&x<12&&y>3&&y<12?48:-17)+n*.4;}
-      if(style==='glass'){d=(x<2||x>13||y<2||y>13)?-5:12;}
-      if(style==='water'){d=(y%4===0?-14:9)+n*.4;}
-      if(style==='unknown'){d=(Math.floor(x/4)+Math.floor(y/4))%2===0?-55:40;}
-      const k=(y*16+x)*4;for(let i=0;i<3;i++)img.data[k+i]=mathClamp(base[i]+d,0,255);
-      img.data[k+3]=style==='glass'?((x<2||x>13||y<2||y>13)?230:65):style==='water'?195:255;
-    }
-    ctx.putImageData(img,0,0);tileCache.set(key,c);return c;
-  }
+  // Legacy semantic function retained for compatibility, never used as a substitute for texture pixels.
+  function colorFor(){return [145,151,155];}
   const box=(x0,y0,z0,x1,y1,z1)=>({x0,y0,z0,x1,y1,z1});
   function rotatedBox(shape,angle){
     if(!angle) return shape;
@@ -176,12 +121,58 @@
   function polygon(ctx,pts,stroke=null,lw=1){ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}}
   function faceVisible(face,yaw,pitch){const n=face.normal;return n[0]*Math.sin(yaw)*Math.cos(pitch)+n[2]*Math.cos(yaw)*Math.cos(pitch)+n[1]*Math.sin(pitch)>0.01;}
   function faceShade(id){return id==='top'?0:id==='east'||id==='west'?0.15:0.26;}
-  function drawTextureFace(ctx,poly,type,id){
-    polygon(ctx,poly);ctx.save();ctx.clip();const texture=tile(type,id==='top'?'top':'side');
-    if(texture){ctx.transform((poly[1].x-poly[0].x)/16,(poly[1].y-poly[0].y)/16,(poly[3].x-poly[0].x)/16,(poly[3].y-poly[0].y)/16,poly[0].x,poly[0].y);ctx.imageSmoothingEnabled=false;ctx.drawImage(texture,0,0,16,16);}
-    ctx.restore();const darkness=faceShade(id);
-    if(darkness){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${darkness})`;ctx.fill();}
-    polygon(ctx,poly,'rgba(17,28,24,.16)',.45);
+  // Source image is an actual PNG decoded from the player's own Minecraft client JAR.
+  // Java UV values are in a 16x16 coordinate system even when PNG resolution is higher.
+  function drawTextureFace(ctx,poly,texture,faceId){
+    polygon(ctx,poly);ctx.save();ctx.clip();
+    if(texture?.image){
+      const im=texture.image,uv=texture.uv||[0,0,16,16],unit=im.width/16;
+      const x=uv[0]*unit,y=uv[1]*unit,w=(uv[2]-uv[0])*unit,h=(uv[3]-uv[1])*unit;
+      if(w>0&&h>0){
+        ctx.transform((poly[1].x-poly[0].x)/16,(poly[1].y-poly[0].y)/16,(poly[3].x-poly[0].x)/16,(poly[3].y-poly[0].y)/16,poly[0].x,poly[0].y);
+        ctx.imageSmoothingEnabled=false;
+        const rotation=((texture.rotation||0)%360+360)%360;
+        if(rotation){ctx.translate(8,8);ctx.rotate(rotation*Math.PI/180);ctx.translate(-8,-8);}
+        ctx.drawImage(im,x,y,w,h,0,0,16,16);
+      }else{ctx.fillStyle='#bdc0c2';ctx.fillRect(0,0,16,16);}
+    }else{
+      // Not a stand-in Minecraft texture: a deliberately neutral "missing assets" marker.
+      ctx.fillStyle='#b7babe';ctx.fillRect(0,0,9999,9999);
+    }
+    ctx.restore();
+    if(texture?.image){const shade=faceShade(faceId);if(shade){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${shade})`;ctx.fill();}}
+    polygon(ctx,poly,'rgba(17,28,24,.18)',.45);
+  }
+  const FACES_BY_NAME={up:FACES[0],down:FACES[1],east:FACES[2],west:FACES[3],south:FACES[4],north:FACES[5]};
+  function rotatePoint(v,axis,degrees,origin){
+    if(!degrees)return v;
+    const a=degrees*Math.PI/180,c=Math.cos(a),s=Math.sin(a),p=v.slice();
+    if(axis==='x'){const y=v[1]-origin[1],z=v[2]-origin[2];p[1]=origin[1]+y*c-z*s;p[2]=origin[2]+y*s+z*c;}
+    if(axis==='y'){const x=v[0]-origin[0],z=v[2]-origin[2];p[0]=origin[0]+x*c+z*s;p[2]=origin[2]-x*s+z*c;}
+    if(axis==='z'){const x=v[0]-origin[0],y=v[1]-origin[1];p[0]=origin[0]+x*c-y*s;p[1]=origin[1]+x*s+y*c;}
+    return p;
+  }
+  function assetFacesFor(block, modelGroup,project,depth,yaw,pitch,opaqueSet){
+    const out=[];
+    for(const model of modelGroup){
+      for(const element of model.elements){
+        const b=box(element.from[0]/16,element.from[1]/16,element.from[2]/16,element.to[0]/16,element.to[1]/16,element.to[2]/16);
+        for(const [faceId,texture] of Object.entries(element.faces)){
+          const face=FACES_BY_NAME[faceId];if(!face||!texture?.image)continue;
+          if(opaqueSet&&texture.cullface){const d={north:[0,0,-1],south:[0,0,1],east:[1,0,0],west:[-1,0,0],up:[0,1,0],down:[0,-1,0]}[texture.cullface];if(d&&opaqueSet.has(`${block.x+d[0]}|${block.y+d[1]}|${block.z+d[2]}`))continue;}
+          let vertices=face.pts(b),normal=face.normal.slice();
+          if(element.rotation){const origin=(element.rotation.origin||[8,8,8]).map(x=>x/16);
+            vertices=vertices.map(v=>rotatePoint(v,element.rotation.axis,element.rotation.angle,origin));
+            normal=rotatePoint(normal,element.rotation.axis,element.rotation.angle,[0,0,0]);}
+          if(model.rotation.x){vertices=vertices.map(v=>rotatePoint(v,'x',model.rotation.x,[.5,.5,.5]));normal=rotatePoint(normal,'x',model.rotation.x,[0,0,0]);}
+          if(model.rotation.y){vertices=vertices.map(v=>rotatePoint(v,'y',model.rotation.y,[.5,.5,.5]));normal=rotatePoint(normal,'y',model.rotation.y,[0,0,0]);}
+          if(!faceVisible({normal},yaw,pitch))continue;
+          const world=vertices.map(v=>[v[0]+block.x,v[1]+block.y,v[2]+block.z]);
+          const avg=world.reduce((sum,v)=>sum.map((n,i)=>n+v[i]/4),[0,0,0]);
+          out.push({poly:world.map(p=>project(...p)),depth:depth(...avg),texture,id:face.id,alpha:1});
+        }
+      }
+    }return out;
   }
   function drawOutline(ctx,block,project,scale,yaw,pitch){
     const x=block.x,y=block.y,z=block.z;
@@ -222,26 +213,34 @@
       ctx.beginPath();let p=project(0,-.03,0);ctx.moveTo(p.x,p.y);for(let [a,b] of [[sx,0],[sx,sz],[0,sz],[0,0]]){p=project(a,-.03,b);ctx.lineTo(p.x,p.y);}ctx.fillStyle='rgba(110,159,93,.45)';ctx.fill();ctx.strokeStyle='rgba(70,110,68,.45)';ctx.lineWidth=.8;ctx.stroke();
       if(sx<=32&&sz<=32) {ctx.strokeStyle='rgba(58,93,62,.15)';ctx.lineWidth=.5;for(let x=0;x<=sx;x++){const a=project(x,0,0),b=project(x,0,sz);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}for(let z=0;z<=sz;z++){const a=project(0,0,z),b=project(sx,0,z);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}}
     const faces=[];
+    const manager=assets(),ready=!!manager?.info().ready;
+    if(ready)void manager.ensure(chosen).catch(e=>console.warn('Vanilla assets:',e));
     const chosenFull=new Set(chosen.filter(isFullCube).map(b=>`${b.x}|${b.y}|${b.z}`));
     const opaqueDirs={east:[1,0,0],west:[-1,0,0],top:[0,1,0],bottom:[0,-1,0],north:[0,0,-1],south:[0,0,1]};
-    for(const b of chosen){const type=rawName(b),geoms=modelFor(b),isOpaque=isFullCube(b),isSeeThrough=['glass','water','leaves'].includes(styleOf(type));
-      for(const part of geoms)for(const f of FACES){
+    let missing=0;
+    for(const b of chosen){
+      const model=ready?manager.get(b):null;
+      if(model?.length){faces.push(...assetFacesFor(b,model,project,depth,yaw,pitch,chosenFull));continue;}
+      missing++;
+      // No fabricated textures. Neutral geometry only when a vanilla model is missing/loading.
+      for(const part of modelFor(b))for(const f of FACES){
         if(!faceVisible(f,yaw,pitch))continue;
-        const direction=opaqueDirs[f.id];if(isOpaque&&!isSeeThrough&&chosenFull.has(`${b.x+direction[0]}|${b.y+direction[1]}|${b.z+direction[2]}`))continue;
-        const coordinates=f.pts(part).map(v=>[v[0]+b.x,v[1]+b.y,v[2]+b.z]);
-        const avg=coordinates.reduce((a,c)=>{a[0]+=c[0];a[1]+=c[1];a[2]+=c[2];return a;},[0,0,0]).map(x=>x/4);
-        faces.push({poly:coordinates.map(p=>project(...p)),depth:depth(...avg),type,id:f.id,alpha:isSeeThrough?.67:1});
+        const d=opaqueDirs[f.id],opaque=isFullCube(b);
+        if(opaque&&chosenFull.has(`${b.x+d[0]}|${b.y+d[1]}|${b.z+d[2]}`))continue;
+        const points=f.pts(part).map(v=>[v[0]+b.x,v[1]+b.y,v[2]+b.z]);
+        const avg=points.reduce((sum,v)=>sum.map((n,i)=>n+v[i]/4),[0,0,0]);
+        faces.push({poly:points.map(p=>project(...p)),depth:depth(...avg),texture:null,id:f.id,alpha:1});
       }
     }
     faces.sort((a,b)=>a.depth-b.depth);
-    for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.type,f.id);}ctx.globalAlpha=1;
+    for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id);}ctx.globalAlpha=1;
     // Highlight is generated from the precise integer voxel coordinates, never AI image analysis.
     for(const b of highlighted.slice(0,64))drawOutline(ctx,b,project,scale,yaw,pitch);
     if(chosen.length<blocks.length&&!opts.icon){ctx.font='600 11px system-ui,sans-serif';ctx.fillStyle='#243328';ctx.fillText(`Vorschau reduziert: ${chosen.length}/${blocks.length} Blöcke`,11,h-15);}
-    if(!opts.icon&&!opts.hideBadge&&opts.context!=='guide'){ctx.fillStyle='rgba(255,255,255,.84)';ctx.fillRect(9,h-29,Math.min(w-18,160),20);ctx.fillStyle='#385343';ctx.font='800 10px system-ui,sans-serif';ctx.fillText('CRAFTSTEPS · PIXEL MODEL',15,h-15);}
-    return {rendered:chosen.length,faces:faces.length};
+    if(!opts.icon&&!opts.hideBadge&&opts.context!=='guide'){ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(9,h-29,Math.min(w-18,205),20);ctx.fillStyle='#385343';ctx.font='700 10px system-ui,sans-serif';ctx.fillText(ready?(missing?`VANILLA · ${missing} MODELLE FEHLEN`:'VANILLA · ORIGINALTEXTUREN'):'ORIGINALTEXTUREN LADEN',15,h-15);}
+    return {rendered:chosen.length,faces:faces.length,missing,vanilla:ready};
   }
   function drawIcon(canvas,type){const b={type,blockId:type,properties:{},x:0,y:0,z:0},build={blocks:[b],width:1,depth:1,height:1};return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});}
   function drawIcons(scope){if(typeof document==='undefined')return;for(const el of (scope||document).querySelectorAll('canvas[data-mat-icon]'))drawIcon(el,el.dataset.matIcon);}
-  return {styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons};
+  return {styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor};
 });

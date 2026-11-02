@@ -31,7 +31,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p site
-          cp index.html studio.html styles.css studio.css app.js core.js schem.js draft-store.js studio.js block-visuals.js favicon.svg site/
+          cp index.html studio.html styles.css studio.css app.js core.js schem.js draft-store.js studio.js block-visuals.js vanilla-assets.js assets-ui.js favicon.svg site/
           touch site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

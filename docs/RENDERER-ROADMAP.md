@@ -1,8 +1,9 @@
-# CraftSteps 3D- und Import-Roadmap (Stand V0.3)
+# CraftSteps 3D- und Import-Roadmap (Stand V0.4)
 
 ## Verlässlich umgesetzt
 
-- Originale 16×16-Pixeltexturen (Muster, keine Mojang-Daten), stilistisch passende Material-Icons.
+- Einlesen der tatsächlichen Minecraft-Java-Blocktexturen und Blockmodell-JSON-Daten aus einer vom Nutzer lokal ausgewählten Vanilla-Client-JAR; die Dateien werden nie über GitHub Pages bereitgestellt.
+- Falls keine originale Minecraft-Datei geladen wurde oder ein Block nicht auflösbar ist, erscheinen graue Platzhalter und keine stilistisch nachgeahmten Texturen.
 - Projektionsbasierte 3D-Darstellung der Blockpositionen mit Rotation, Neigung und Zoom.
 - Exakte 1×1×1-Weltkoordinaten für die roten Blockumrandungen. Die Linie markiert die *Platzierungszelle* und nicht die sichtbaren Grenzen der Treppen-/Fence-Teilmeshes.
 - Zustandsgesteuerte Geometrien für vereinfachte Treppen, Slabs, Türen, Falltüren, Zäune, Glasscheiben und weitere Elemente. Abweichungen vom Vanilla-Minecraft-Modell sind möglich.
@@ -12,10 +13,10 @@
 
 ## Noch nicht umgesetzt
 
-1. **Vollständige Vanilla-Modell-/Blockstate-Pipeline**: Ressourcenpaket-Modelle (JSON), Varianten, Multipart, korrekte Rotationen / UV, Geometrie (Zäune, Redstone, Fenster, Flüssigkeiten, Slabs, Treppen in allen Formen), Tints, BlockEntities und versionsgebundene Datenbank. Das ist erforderlich für eine wirklich exakte Darstellung beliebiger Vanilla-Blöcke.
-2. **Lizenzsauberer Asset-Import**: eigene zulässige Resource-Packs für Texturen/Modelle oder vom Nutzer lokal bereitgestellte Assets; keine ungeprüfte Weiterverteilung geschützter Minecraft-Game-Assets.
+1. **Vollständige Vanilla-Modell-/Blockstate-Pipeline**: Blockstate-Varianten, Multipart, JSON-Modellvererbung, PNG-Texturen und erste Rotationen werden bereits aus der lokalen Client-JAR gelesen. Noch fehlen die vollständige UV-/Richtungsbehandlung, Biomeinfärbungen, Animation, Element-Rescale, viele Sondermodelle, Render-Layer, BlockEntities und versionsgebundene Datenbank.
+2. **Asset-Weiterentwicklung**: der lokale, browserseitige Import der eigenen Java-Clientdatei ist umgesetzt. Ein zuverlässiger Resource-Pack-Overlay-Import (nur Assets, keine kompletten Spiel-Dateien) und korrekte Versionserkennung sind noch offen. Keine Weiterverteilung geschützter Minecraft-Dateien.
 3. **Produktionsrenderer für große Builds**: WebGL-Instancing, Chunking, Frustum- und Face-Culling und schnellerer Picking-Code. Die aktuelle Canvas-Engine begrenzt die Anzahl gleichzeitig gerenderter Blöcke.
-4. **Verlässliche Auto-Schrittplanung**: Platzierungs- und Schwerkraftregeln, Türen/Betten/Gewächse als ein Inventarobjekt, Redstone und zusammenhängende Bauteile. Zwischenstand V0.3 sind nur Rohschritte nach Höhe.
+4. **Verlässliche Auto-Schrittplanung**: Platzierungs- und Schwerkraftregeln, Türen/Betten/Gewächse als ein Inventarobjekt, Redstone und zusammenhängende Bauteile. Zwischenstand V0.4 sind nur Rohschritte nach Höhe.
 5. **Alle Formate**: Vanilla-Struktur-`.nbt`, Bedrock `.mcstructure` und vollständige Legacy-Datenvarianten. Nutzer müssen Fehlermeldungen sehen, kein stummes Fallback.
 6. **Online-Adminbereich**: Backend, Authentifizierung, serverseitige Berechtigungen, Upload-Limits und moderierter Veröffentlichungsprozess. Auf GitHub Pages allein nicht möglich.
 
@@ -23,7 +24,7 @@
 
 - Kein direktes HTML aus Datei-Metadaten oder Blocknamen erzeugen, ohne zu escapen.
 - Begrenzung auf 5 MiB komprimiert / 14 MiB entpackt / 24.000 Zellen / 10.000 Blöcke. Eingabevalidierung für alle NBT-Typen, Array-Längen und Palettenindizes.
-- Die Galerie übernimmt nur validierte lokale Entwürfe. V0.3 führt keine Cloud-Aktionen aus.
+- Die Galerie übernimmt nur validierte lokale Entwürfe. V0.4 führt keine Cloud-Aktionen aus.
 - Tests für Datenformate und Übergänge an 64-Bit-Grenzen, negative Regionen, nicht zugeordnete Legacy-IDs, Materialregel-Sonderfälle und geometrische Zustände ausbauen.
 - Rendering und UI auch auf Android-Mobilgeräten mit realistischen Bauplan-Dateien testen. Browser-Smoke-Tests sind kein Ersatz für ein vollständiges mobiles Gerätelabor.
 - Manuelle Prüfung, ob Materialliste und Step-Reihenfolge den ursprünglichen Bauplan exakt und baubar abbilden.

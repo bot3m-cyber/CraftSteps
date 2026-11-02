@@ -5,15 +5,26 @@ CraftSteps ist eine unabhängige, frei zugängliche Schritt-für-Schritt-Bauanle
 **Live:** https://bot3m-cyber.github.io/CraftSteps/  
 **Importstudio:** https://bot3m-cyber.github.io/CraftSteps/studio.html
 
-## V0.3 – 3D-Blockmodelle, Icons und mehr Dateiimporte
+## V0.4 – echte Originaltexturen aus der eigenen Minecraft-Java-Datei
 
-- Neu entwickelter **Canvas-3D-Renderer** aus echten Blockkoordinaten mit dreh-/neigbarer Kamera (Ziehen am Bauwerk) und Zoom in der Anleitung. Kein Screenshot- oder KI-Umrandungsalgorithmus: rote Umrandungen werden mathematisch über die Projektion der Blockpositionen erzeugt.
-- **Eigene, pixelige 16×16-Materialtexturen** statt beliebiger Zufallsfarben; kleine **gerenderte Block-Icons** in Gesamtmaterialliste, Schritten und Koordinatenliste. Minecraft-ähnliche Gestaltung **ohne mitgelieferte Mojang-Texturen**.
-- Erste zustandsabhängige Modelle für Treppen (Drehung, obere/untere Hälfte, grobe Eckformen), Stufen, Türen, Falltüren, Zäune, Mauern, Glasscheiben, Betten, Laternen und andere Blöcke. **Das ist noch keine vollständige Vanilla-Blockmodell-Engine**; komplexe Blockstates, Redstone, BlockEntities, Mod-Assets und einige Sonderformen werden weiterhin nur vereinfacht dargestellt.
-- **Lokaler Dateiimport** für Sponge `.schem` V2/V3, **Litematica `.litematic`** mit Regionen/Paletten/Bitpacking sowie **MCEdit/WorldEdit Legacy `.schematic`** (nur begrenztes numerisches ID-Mapping, Warnungen bei fehlender Zuordnung). Alle Formate sind Minecraft-Java-orientiert. `.mcstructure`, Vanilla `.nbt` und Mod-spezifische Daten werden nicht vollständig unterstützt.
-- Bereits **direkt nach dem Einlesen** erscheint im Studio eine **drehbare 3D-Vorschau**, zusätzlich die Draufsicht, Materialliste, Importwarnungen und ein Formular für einen privaten Entwurf.
-- Im Bauanleitungsmodus wird zu jedem neuen Block die **Koordinate X/Y/Z** angezeigt, bei Importen außerdem die erkannten Blockstate-Properties. Red outlines bleiben beim Drehen konsistent.
-- Drei originale Demobauwerke, Kategorien, Suche, Favoriten, Materiallisten, Fortschrittsspeicherung und private Entwürfe bleiben erhalten.
+CraftSteps verwendet für die 3D-Vorschau **die originalen Vanilla-Textur-PNGs und Blockmodell-JSON-Dateien aus der Java-Clientdatei, die du selbst im Browser auswählst**. Die bisher erfundenen Pixeltexturen wurden als Darstellung entfernt; ohne ausgewählte Minecraft-Datei erscheinen **neutrale graue Platzhalter**. Der Webserver und das öffentliche GitHub-Repository enthalten **keine Minecraft-Spieltexturen, keine extrahierten Mojang-Dateien und keine eingebettete Client-JAR**.
+
+### Originale Minecraft-Java-Assets aktivieren
+
+1. Öffne die CraftSteps-Galerie oder das Studio und wähle oben **„Minecraft-Client (.jar) auswählen“**.
+2. Suche unter Windows im Dateimanager nach `%APPDATA%\.minecraft\versions\<Version>\<Version>.jar` (z. B. unter `1.21.1/1.21.1.jar`). Unter Linux/macOS findest du die Datei entsprechend im `.minecraft/versions/`-Ordner deines Minecraft-Launchers. Eine vollständige Vanilla-Java-Client-JAR ist erforderlich, kein reines Texturpaket.
+3. CraftSteps liest die Originaldatei **nur lokal im Browser**. Es verarbeitet daraus die Vanilla-Blockstates, Modellvererbungen, Varianten, Multipart-Modelle und Textur-PNGs. Sie werden nicht an einen Server übertragen und nicht öffentlich geteilt.
+4. Die Datei wird – sofern dein Browser genügend lokalen Speicher hat – nur in diesem Browser in IndexedDB hinterlegt und beim nächsten Besuch wieder gelesen. Mit **„Entfernen“** löschst du diesen lokalen Eintrag.
+
+Wichtig: Minecraft-Spieltexturen sind urheberrechtlich geschützt. Die Minecraft [Usage Guidelines](https://www.minecraft.net/de-de/usage-guidelines) verbieten insbesondere, Spiel-/Asset-Dateien einfach weiterzuverbreiten. Deshalb enthält diese Web-App keinen öffentlichen Mojang-Textur-Download. Das Projekt ist kein offizielles Produkt von Mojang oder Microsoft.
+
+Die Original-PNGs werden unverändert aus der eigenen Datei geladen. **Die 3D-Anzeige ist dennoch nicht für alle Blockzustände pixelgenau zum Minecraft-Spiel**: Biomeinfärbung (Gras/Laub), animierte Texturen, komplexe Elementrotationen, manche Sondermodelle, Render-Layer und Entities sind noch unvollständig. Unbekannte/fehlende Models erscheinen neutral und werden nicht als echte Minecraft-Texturen ausgegeben.
+
+### Weitere V0.3-Funktionen bleiben erhalten
+
+- Dreh- und zoombare 3D-Bauanleitungen mit roten, koordinatenbasierten Markierungen und Material-Icons.
+- Lokaler Import von Sponge `.schem` V2/V3, `.litematic` und älteren `.schematic`-Dateien.
+- Private Bauentwürfe, Materialliste, Schrittanzeige und automatische vorläufige Rohschritte nach Höhe.
 
 ## Eigenes Bauwerk importieren
 
@@ -30,7 +41,7 @@ Die Datei wird **nicht auf einen Server hochgeladen**. Private Entwürfe werden 
 - Pro Datei höchstens **5 MiB komprimiert, 14 MiB entpackt, 24.000 Blockpositionen, 10.000 nicht-Luft-Blöcke**. Große Szenen werden aus Performancegründen in der Ansicht teilweise ausgedünnt; die intern importierten Rohdaten bleiben erhalten.
 - Browser mit `DecompressionStream`, `IndexedDB` und Canvas nötig. Im Einzelfall unterscheiden sich die alten Block-IDs in `.schematic` von neueren Minecraft-IDs; nicht erkannte IDs werden ausdrücklich als **pinkes Platzhaltermodell** markiert.
 - **Materialmengen, Stackgrößen, Blockstates und baubare Reihenfolgen sind bei Importen vorläufig.** Doppelteile, mehrstufige Platzierung, Flüssigkeiten, Redstone und Entity-Inhalte benötigen eine zusätzliche Prüfung vor Veröffentlichung.
-- Vollständige Ressourcenpaket-Interpretation (Blockstate-JSON, Varianten, Multipart, Textur-Atlas) und echte Mojang-Assets werden **nicht** ausgeliefert. Ein präziserer, lizenzsauberer Resource-Pack-Renderer ist ein separater Meilenstein.
+- Blockstate-JSON, Varianten und Multipart aus der lokal bereitgestellten Java-Client-JAR werden grundsätzlich eingelesen. Vollständige Modell-/UV- und Beleuchtungstreue sowie Biomeinfärbung sind noch nicht erreicht. Die originalen Asset-Dateien werden **nicht von unserer Webseite ausgeliefert**.
 - Die automatischen Rohschritte werden primär nach Höhe erzeugt. Es gibt keine KI, die aus Einzelbildern Pixel-korrekte Positionen rät; diese Daten kommen aus den importierten 3D-Koordinaten.
 
 ## Lokal entwickeln und testen
@@ -41,14 +52,15 @@ python -m http.server 8080
 npm test
 ```
 
-Es gibt **keine externen Laufzeitbibliotheken**. Node.js >=20 erforderlich. GitHub Actions führt 28 Unit-Tests für Blockdaten, Importe und die 3D-Zeichenengine aus. Zusätzlich wurden Browser-Smoke-Tests für die Galerie, Schrittansicht und Studio-Importer durchgeführt.
+Es gibt **keine externen Laufzeitbibliotheken**. Node.js >=20 erforderlich. GitHub Actions führt Unit-Tests für Blockdaten, Importe, die 3D-Zeichenengine und den Java-Asset-Loader aus. Die Minecraft-Originaldatei gehört nicht zu diesem Repository.
 
 ## Projektstruktur
 
 | Datei | Aufgabe |
 | --- | --- |
 | `index.html`, `app.js`, `styles.css` | Galerie, Bauanleitungen und Materialansichten |
-| `block-visuals.js` | Originale 16×16-Blocktexturen, Canvas-3D-Modelle und Pixel-Icons |
+| `block-visuals.js` | 3D-Canvas-Darstellung mit geladenen Vanilla-Modellen/Originaltexturen |
+| `vanilla-assets.js`, `assets-ui.js` | Sicher begrenzter ZIP-Import aus der eigenen Minecraft-Java-JAR und browserlokale Auswahl |
 | `core.js` | Blockdaten, Mengenberechnung und Schritt-Engine |
 | `studio.html`, `studio.js`, `studio.css` | Private Import-/Entwurfsoberfläche mit drehbarer 3D-Vorschau |
 | `schem.js` | Komprimierter NBT-Parser für `.schem`, `.litematic` und Legacy `.schematic` |
