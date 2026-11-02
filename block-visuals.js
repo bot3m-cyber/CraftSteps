@@ -121,26 +121,27 @@
   function polygon(ctx,pts,stroke=null,lw=1){ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}}
   function faceVisible(face,yaw,pitch){const n=face.normal;return n[0]*Math.sin(yaw)*Math.cos(pitch)+n[2]*Math.cos(yaw)*Math.cos(pitch)+n[1]*Math.sin(pitch)>0.01;}
   function faceShade(id){return id==='top'?0:id==='east'||id==='west'?0.15:0.26;}
+  const PLACEHOLDER_FACE={top:'#dfe4e1',bottom:'#89928e',east:'#aeb7b3',west:'#a3aca8',south:'#929c97',north:'#98a29d'};
   // Source image is an actual PNG decoded from the player's own Minecraft client JAR.
   // Java UV values are in a 16x16 coordinate system even when PNG resolution is higher.
   function drawTextureFace(ctx,poly,texture,faceId){
-    polygon(ctx,poly);ctx.save();ctx.clip();
-    if(texture?.image){
-      const im=texture.image,uv=texture.uv||[0,0,16,16],unit=im.width/16;
-      const x=uv[0]*unit,y=uv[1]*unit,w=(uv[2]-uv[0])*unit,h=(uv[3]-uv[1])*unit;
-      if(w>0&&h>0){
-        ctx.transform((poly[1].x-poly[0].x)/16,(poly[1].y-poly[0].y)/16,(poly[3].x-poly[0].x)/16,(poly[3].y-poly[0].y)/16,poly[0].x,poly[0].y);
-        ctx.imageSmoothingEnabled=false;
-        const rotation=((texture?.rotation||0)%360+360)%360;
-        if(rotation){ctx.translate(8,8);ctx.rotate(rotation*Math.PI/180);ctx.translate(-8,-8);}
-        ctx.drawImage(im,x,y,w,h,0,0,16,16);
-      }else{ctx.fillStyle='#bdc0c2';ctx.fillRect(0,0,16,16);}
-    }else{
-      // Not a stand-in Minecraft texture: a deliberately neutral "missing assets" marker.
-      ctx.fillStyle='#b7babe';ctx.fillRect(0,0,9999,9999);
+    if(!texture?.image){
+      // A deliberately plain, opaque geometry marker. It is never presented as a Minecraft texture.
+      polygon(ctx,poly);ctx.fillStyle=PLACEHOLDER_FACE[faceId]||'#aab2ae';ctx.fill();
+      polygon(ctx,poly,'rgba(35,46,41,.38)',.65);return;
     }
+    polygon(ctx,poly);ctx.save();ctx.clip();
+    const im=texture.image,uv=texture.uv||[0,0,16,16],unit=im.width/16;
+    const x=uv[0]*unit,y=uv[1]*unit,w=(uv[2]-uv[0])*unit,h=(uv[3]-uv[1])*unit;
+    if(w>0&&h>0){
+      ctx.transform((poly[1].x-poly[0].x)/16,(poly[1].y-poly[0].y)/16,(poly[3].x-poly[0].x)/16,(poly[3].y-poly[0].y)/16,poly[0].x,poly[0].y);
+      ctx.imageSmoothingEnabled=false;
+      const rotation=((texture.rotation||0)%360+360)%360;
+      if(rotation){ctx.translate(8,8);ctx.rotate(rotation*Math.PI/180);ctx.translate(-8,-8);}
+      ctx.drawImage(im,x,y,w,h,0,0,16,16);
+    }else{ctx.fillStyle='#bdc0c2';ctx.fillRect(0,0,16,16);}
     ctx.restore();
-    if(texture?.image){const shade=faceShade(faceId);if(shade){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${shade})`;ctx.fill();}}
+    const shade=faceShade(faceId);if(shade){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${shade})`;ctx.fill();}
     polygon(ctx,poly,'rgba(17,28,24,.18)',.45);
   }
   const FACES_BY_NAME={up:FACES[0],down:FACES[1],east:FACES[2],west:FACES[3],south:FACES[4],north:FACES[5]};
@@ -178,7 +179,19 @@
   function drawOutline(ctx,block,project,scale,yaw,pitch){
     const x=block.x,y=block.y,z=block.z;
     const all=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]].map(([a,b,c])=>project(x+a,y+b,z+c));
-    const edges=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
+    const visibleFaces=[
+      {face:FACES[0],ids:[2,3,7,6]},
+      {face:FACES[1],ids:[0,4,5,1]},
+      {face:FACES[2],ids:[1,5,7,3]},
+      {face:FACES[3],ids:[4,0,2,6]},
+      {face:FACES[4],ids:[5,4,6,7]},
+      {face:FACES[5],ids:[0,1,3,2]}
+    ];
+    const seen=new Set(),edges=[];
+    for(const entry of visibleFaces){if(!faceVisible(entry.face,yaw,pitch))continue;for(let i=0;i<4;i++){
+      const a=entry.ids[i],b=entry.ids[(i+1)%4],key=a<b?`${a}-${b}`:`${b}-${a}`;
+      if(!seen.has(key)){seen.add(key);edges.push([a,b]);}
+    }}
     ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
     for(const [i,j] of edges){ctx.beginPath();ctx.moveTo(all[i].x,all[i].y);ctx.lineTo(all[j].x,all[j].y);ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=Math.max(2.4,Math.min(5,scale*.13));ctx.stroke();ctx.strokeStyle='#ed3537';ctx.lineWidth=Math.max(1.35,Math.min(3,scale*.073));ctx.stroke();}
     ctx.restore();
