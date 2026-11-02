@@ -1,7 +1,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const zlib=require('node:zlib');
-const {ZipArchive,AssetManager,chooseVariants,testWhen,resolveTexture}=require('../vanilla-assets.js');
+const {ZipArchive,AssetManager,chooseVariants,testWhen,resolveTexture,defaultUV}=require('../vanilla-assets.js');
 function zip(files){
  let chunks=[],records=[],offset=0;
  for(const [name,value] of Object.entries(files)){
@@ -28,10 +28,12 @@ function assetFile(){return zip({
 test('ZIP index validates a complete Java archive and inflates deflate-raw entries',async()=>{const archive=await ZipArchive.open(assetFile());assert.ok(archive.has(stem+'textures/block/stone.png'));const json=await archive.json(stem+'blockstates/stone.json');assert.equal(json.variants[''].model,'minecraft:block/stone');});
 test('ZIP import rejects incomplete or oversized / malformed archives',async()=>{await assert.rejects(ZipArchive.open(zip({'not-minecraft/readme.txt':'x'})),/Vanilla-Java-Assets/);await assert.rejects(ZipArchive.open(new File(['invalid'],'x.jar')),/ZIP-Archiv|Ungültige Datei/);});
 test('blockstate variants use current property values and honor multiparts',()=>{const variants={variants:{'facing=north,half=top':{model:'a'},'facing=north,half=bottom':{model:'b'},'':{model:'base'}},multipart:[{when:{facing:'north|east'},apply:{model:'overlay'}}]};assert.deepEqual(chooseVariants(variants,{facing:'north',half:'bottom'}).map(v=>v.model),['b','overlay']);assert.equal(testWhen({OR:[{facing:'south'},{facing:'north'}]},{facing:'north'}),true);});
+test('weighted model alternatives are deterministic and preserve vanilla weights',()=>{const spec={variants:{'':[{model:'rare',weight:1},{model:'common',weight:3}]}};assert.equal(chooseVariants(spec,{},'2')[0].model,'rare');assert.equal(chooseVariants(spec,{},'3')[0].model,'common');assert.deepEqual(chooseVariants(spec,{},'3'),chooseVariants(spec,{},'3'));});
 test('vanilla texture references are constrained to asset namespace',()=>{assert.equal(resolveTexture('#all',{all:'minecraft:block/stone'}),stem+'textures/block/stone.png');assert.equal(resolveTexture('#loop',{loop:'#loop'}),null);assert.equal(resolveTexture('../evil',{}),null);});
+test('implicit face UVs follow the Java block-model coordinate rules',()=>{assert.deepEqual(defaultUV('up',[2,3,4],[14,11,12]),[2,4,14,12]);assert.deepEqual(defaultUV('north',[2,3,4],[14,11,12]),[2,5,14,13]);assert.deepEqual(defaultUV('east',[2,3,4],[14,11,12]),[4,5,12,13]);});
 test('real model JSON and PNGs load from the local archive without a texture generator',async()=>{
  const manager=new AssetManager(),previous=globalThis.createImageBitmap;
  globalThis.createImageBitmap=async blob=>({width:16,height:16,testBytes:Buffer.from(await blob.arrayBuffer()).toString()});
- try{await manager.load(assetFile(),{persist:false});await manager.ensure([{type:'stone',x:0,y:0,z:0},{type:'oak_stairs',blockId:'minecraft:oak_stairs',properties:{facing:'south',half:'bottom'},x:1,y:0,z:0}]);const stone=manager.get({type:'stone'});assert.equal(stone.length,1);assert.equal(stone[0].elements[0].faces.up.image.testBytes,'PNG owned by unit test (not a Mojang texture)');const stairs=manager.get({type:'oak_stairs',properties:{facing:'south',half:'bottom'}});assert.equal(stairs[0].rotation.y,180);assert.equal(stairs[0].elements[0].faces.north.image.testBytes,'PNG from test');}
+ try{await manager.load(assetFile(),{persist:false});await manager.ensure([{type:'stone',x:0,y:0,z:0},{type:'oak_stairs',blockId:'minecraft:oak_stairs',properties:{facing:'south',half:'bottom'},x:1,y:0,z:0}]);const stone=manager.get({type:'stone',x:0,y:0,z:0});assert.equal(stone.length,1);assert.equal(stone[0].elements[0].faces.up.image.testBytes,'PNG owned by unit test (not a Mojang texture)');const stairs=manager.get({type:'oak_stairs',properties:{facing:'south',half:'bottom'},x:1,y:0,z:0});assert.equal(stairs[0].rotation.y,180);assert.equal(stairs[0].elements[0].faces.north.image.testBytes,'PNG from test');}
  finally{globalThis.createImageBitmap=previous;}
 });
