@@ -76,3 +76,12 @@ Das Studio enthält keine geheimen Schlüssel, Anmeldung oder serverseitige Bere
 Der frühere Pixel-Fallback wurde aus Laufzeitcode, HTML und Deployment entfernt. Material-Icons und Blockflächen nutzen nach dem Import dieselbe originale Asset-Pipeline. Ohne lokale Assets oder bei einem fehlenden Modell bleibt die Fläche neutral grau und die Oberfläche nennt die Einschränkung ausdrücklich. Blockstate-Varianten und Multipart-Modelle werden ausgewertet; gewichtete Varianten werden deterministisch nach Position gewählt, implizite Vanilla-UVs werden berechnet und Modellrotationen werden auf Geometrie und Sichtbarkeit angewandt.
 
 Das ist bewusst keine Behauptung vollständiger Pixelgleichheit mit Minecraft. Biomeinfärbung, Flüssigkeiten, animierte Texturen, Entity-Renderer, Render-Layer und einzelne komplexe Sondermodelle bleiben begrenzt. Auf Mobilgeräten kann eine Client-JAR nicht automatisch aus einer Desktop-Installation gelesen werden; der Nutzer muss eine rechtmäßig vorhandene Datei lokal auswählen. CraftSteps lädt und veröffentlicht sie nicht.
+
+
+## V0.4.2 – Texturdiagnose und mobile Anzeige
+
+**Wichtig:** Minecraft-Originaltexturen sind wegen der Eigentumsrechte von Mojang/Microsoft nicht mit der öffentlichen Webseite ausgeliefert. Der Browser kann die Dateien aus `.minecraft` **nicht von sich aus öffnen**. Ohne lokal ausgewählte Datei kann deshalb **keine** identische Minecraft-Textur dargestellt werden. Die V0.4.2-Anzeige markiert das deutlich und zeigt in der Materialliste ein Fragezeichen anstelle eines scheinbar echten Block-Icons. Das ist keine neue Minecraft-Textur.
+
+So geht es: Am PC die passende Java-Clientdatei `%APPDATA%\\.minecraft\\versions\\<VERSION>\\<VERSION>.jar` über **„Original-Minecraft-Datei auswählen“** laden. Auf Android zunächst dieselbe Datei vom eigenen PC auf das Handy übertragen und in CraftSteps über den Dateidialog auswählen. Alles wird nur im Browser gelesen und möglichst lokal gespeichert; auf anderen Geräten muss die Datei erneut ausgewählt werden.
+
+Die eingebauten Demoblöcke `leaves`, `hay`, `moss` und `stone_slab` werden jetzt den tatsächlichen Java-Block-IDs zugeordnet. Das verbessert die Abdeckung nach dem Laden des richtigen Java-Archivs. Für vollständige Pixelgenauigkeit bei komplexen Blockstates ist weitere Renderer-Arbeit nötig; V0.4.2 garantiert ausdrücklich nicht 100 % korrekt gerenderte Blöcke.
