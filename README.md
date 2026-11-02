@@ -7,7 +7,7 @@ CraftSteps ist eine unabhängige, frei zugängliche Schritt-für-Schritt-Bauanle
 
 ## V0.4 – echte Originaltexturen aus der eigenen Minecraft-Java-Datei
 
-CraftSteps verwendet für die 3D-Vorschau **die originalen Vanilla-Textur-PNGs und Blockmodell-JSON-Dateien aus der Java-Clientdatei, die du selbst im Browser auswählst**. Die bisher erfundenen Pixeltexturen wurden als Darstellung entfernt; ohne ausgewählte Minecraft-Datei erscheinen **neutrale graue Platzhalter**. Der Webserver und das öffentliche GitHub-Repository enthalten **keine Minecraft-Spieltexturen, keine extrahierten Mojang-Dateien und keine eingebettete Client-JAR**.
+CraftSteps verwendet für die 3D-Vorschau **die originalen Vanilla-Textur-PNGs und Blockmodell-JSON-Dateien aus der Java-Clientdatei, die du selbst im Browser auswählst**. Die bisher erfundenen Pixeltexturen wurden als Darstellung entfernt; ohne ausgewählte Minecraft-Datei erscheinen **als Ersatz gekennzeichnete, selbst erzeugte Pixel-Vorschautexturen**.. Der Webserver und das öffentliche GitHub-Repository enthalten **keine Minecraft-Spieltexturen, keine extrahierten Mojang-Dateien und keine eingebettete Client-JAR**.
 
 ### Originale Minecraft-Java-Assets aktivieren
 
@@ -69,3 +69,7 @@ Es gibt **keine externen Laufzeitbibliotheken**. Node.js >=20 erforderlich. GitH
 | `docs/RENDERER-ROADMAP.md` | Vorläufige Modellregeln und geplanter Ausbau |
 
 Das Studio enthält keine geheimen Schlüssel, Anmeldung oder serverseitige Berechtigungen. Der Import wird nicht öffentlich geteilt. Copyright- und Markenrechte an Minecraft bleiben bei den jeweiligen Rechteinhabern.
+
+
+## V0.4.1 – Textureless-Regression auf mobilen Geräten behoben
+Wenn keine Minecraft-Java-Clientdatei verfügbar ist, stellt CraftSteps die Bauwerke und Material-Icons nicht mehr als vollständig graue Würfel dar. Stattdessen wird **eine ausdrücklich gekennzeichnete, selbst erzeugte Pixel-Vorschau** angezeigt. **Diese Vorschau enthält keine originalen Minecraft-Texturen.** Im Bauschritt führt ein neuer Button direkt zur lokalen Dateiauswahl; nach erfolgreichem Laden nutzt CraftSteps die originalen PNGs aus der eigenen Java-JAR. Fehlende Vanilla-Modelle erhalten eine Ersatzvorschau und werden als unvollständig gekennzeichnet. Keine Dateien werden an den Server hochgeladen oder von CraftSteps verteilt.
