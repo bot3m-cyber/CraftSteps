@@ -37,3 +37,11 @@ test('real model JSON and PNGs load from the local archive without a texture gen
  try{await manager.load(assetFile(),{persist:false});await manager.ensure([{type:'stone',x:0,y:0,z:0},{type:'oak_stairs',blockId:'minecraft:oak_stairs',properties:{facing:'south',half:'bottom'},x:1,y:0,z:0}]);const stone=manager.get({type:'stone',x:0,y:0,z:0});assert.equal(stone.length,1);assert.equal(stone[0].elements[0].faces.up.image.testBytes,'PNG owned by unit test (not a Mojang texture)');const stairs=manager.get({type:'oak_stairs',properties:{facing:'south',half:'bottom'},x:1,y:0,z:0});assert.equal(stairs[0].rotation.y,180);assert.equal(stairs[0].elements[0].faces.north.image.testBytes,'PNG from test');}
  finally{globalThis.createImageBitmap=previous;}
 });
+
+test('demo block names resolve to actual vanilla models without fabricated textures',()=>{
+ const {stateId}=require('../vanilla-assets.js');
+ for(const [legacy,actual] of Object.entries({leaves:'oak_leaves',hay:'hay_block',moss:'moss_block',stone_slab:'stone_brick_slab'}))
+   assert.equal(stateId({type:legacy}),actual);
+ assert.equal(stateId({type:'stone_bricks'}),'stone_bricks');
+ assert.equal(stateId({blockId:'minecraft:oak_planks',type:'oak_planks'}),'oak_planks');
+});
