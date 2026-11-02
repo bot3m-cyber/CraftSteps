@@ -123,15 +123,17 @@
   function faceShade(id){return id==='top'?0:id==='east'||id==='west'?0.15:0.26;}
   // Source image is an actual PNG decoded from the player's own Minecraft client JAR.
   // Java UV values are in a 16x16 coordinate system even when PNG resolution is higher.
-  function drawTextureFace(ctx,poly,texture,faceId){
+  function drawTextureFace(ctx,poly,texture,faceId,fallbackType){
+    const preview=typeof globalThis!=='undefined'?globalThis.CraftStepsPreviewVisuals:null;
+    const previewTexture=!texture?.image&&fallbackType&&preview?.tile?preview.tile(fallbackType,faceId==='top'?'top':'side'):null;
     polygon(ctx,poly);ctx.save();ctx.clip();
-    if(texture?.image){
-      const im=texture.image,uv=texture.uv||[0,0,16,16],unit=im.width/16;
+    if(texture?.image||previewTexture){
+      const im=texture?.image||previewTexture,uv=texture?.uv||[0,0,16,16],unit=im.width/16;
       const x=uv[0]*unit,y=uv[1]*unit,w=(uv[2]-uv[0])*unit,h=(uv[3]-uv[1])*unit;
       if(w>0&&h>0){
         ctx.transform((poly[1].x-poly[0].x)/16,(poly[1].y-poly[0].y)/16,(poly[3].x-poly[0].x)/16,(poly[3].y-poly[0].y)/16,poly[0].x,poly[0].y);
         ctx.imageSmoothingEnabled=false;
-        const rotation=((texture.rotation||0)%360+360)%360;
+        const rotation=((texture?.rotation||0)%360+360)%360;
         if(rotation){ctx.translate(8,8);ctx.rotate(rotation*Math.PI/180);ctx.translate(-8,-8);}
         ctx.drawImage(im,x,y,w,h,0,0,16,16);
       }else{ctx.fillStyle='#bdc0c2';ctx.fillRect(0,0,16,16);}
@@ -140,7 +142,7 @@
       ctx.fillStyle='#b7babe';ctx.fillRect(0,0,9999,9999);
     }
     ctx.restore();
-    if(texture?.image){const shade=faceShade(faceId);if(shade){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${shade})`;ctx.fill();}}
+    if(texture?.image||previewTexture){const shade=faceShade(faceId);if(shade){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${shade})`;ctx.fill();}}
     polygon(ctx,poly,'rgba(17,28,24,.18)',.45);
   }
   const FACES_BY_NAME={up:FACES[0],down:FACES[1],east:FACES[2],west:FACES[3],south:FACES[4],north:FACES[5]};
@@ -193,8 +195,14 @@
     for(const [i,j] of edges){ctx.beginPath();ctx.moveTo(all[i].x,all[i].y);ctx.lineTo(all[j].x,all[j].y);ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=Math.max(2.4,Math.min(5,scale*.13));ctx.stroke();ctx.strokeStyle='#ed3537';ctx.lineWidth=Math.max(1.35,Math.min(3,scale*.073));ctx.stroke();}
     ctx.restore();
   }
+  function textureMode(){return assets()?.info().ready?'vanilla':'preview';}
   function draw(canvas,build,opts={}){
     if(!canvas||!build||!canvas.getContext)return {rendered:0};
+    // Keep mobile guides readable without a Java JAR, but label the preview as non-vanilla.
+    if(textureMode()==='preview'){
+      const preview=typeof globalThis!=='undefined'?globalThis.CraftStepsPreviewVisuals:null;
+      if(preview?.draw){const result=preview.draw(canvas,build,opts);return {...result,vanilla:false,preview:true};}
+    }
     const ctx=canvas.getContext('2d');if(!ctx)return {rendered:0};
     const rect=canvas.getBoundingClientRect(),w=opts.icon?48:Math.max(1,rect.width),h=opts.icon?48:Math.max(1,rect.height);
     if(!opts.icon&&(w<4||h<4))return {rendered:0};
@@ -229,18 +237,18 @@
         if(opaque&&chosenFull.has(`${b.x+d[0]}|${b.y+d[1]}|${b.z+d[2]}`))continue;
         const points=f.pts(part).map(v=>[v[0]+b.x,v[1]+b.y,v[2]+b.z]);
         const avg=points.reduce((sum,v)=>sum.map((n,i)=>n+v[i]/4),[0,0,0]);
-        faces.push({poly:points.map(p=>project(...p)),depth:depth(...avg),texture:null,id:f.id,alpha:1});
+        faces.push({poly:points.map(p=>project(...p)),depth:depth(...avg),texture:null,type:rawName(b),id:f.id,alpha:1});
       }
     }
     faces.sort((a,b)=>a.depth-b.depth);
-    for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id);}ctx.globalAlpha=1;
+    for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id,f.type);}ctx.globalAlpha=1;
     // Highlight is generated from the precise integer voxel coordinates, never AI image analysis.
     for(const b of highlighted.slice(0,64))drawOutline(ctx,b,project,scale,yaw,pitch);
     if(chosen.length<blocks.length&&!opts.icon){ctx.font='600 11px system-ui,sans-serif';ctx.fillStyle='#243328';ctx.fillText(`Vorschau reduziert: ${chosen.length}/${blocks.length} Blöcke`,11,h-15);}
-    if(!opts.icon&&!opts.hideBadge&&opts.context!=='guide'){ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(9,h-29,Math.min(w-18,205),20);ctx.fillStyle='#385343';ctx.font='700 10px system-ui,sans-serif';ctx.fillText(ready?(missing?`VANILLA · ${missing} MODELLE FEHLEN`:'VANILLA · ORIGINALTEXTUREN'):'ORIGINALTEXTUREN LADEN',15,h-15);}
+    if(!opts.icon&&!opts.hideBadge&&opts.context!=='guide'){ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(9,h-29,Math.min(w-18,205),20);ctx.fillStyle='#385343';ctx.font='700 10px system-ui,sans-serif';ctx.fillText(ready?(missing?`VANILLA + VORSCHAU (${missing} BLOCK-MODELLE)`:'VANILLA · ORIGINALTEXTUREN'):'ORIGINALTEXTUREN LADEN',15,h-15);}
     return {rendered:chosen.length,faces:faces.length,missing,vanilla:ready};
   }
   function drawIcon(canvas,type){const b={type,blockId:type,properties:{},x:0,y:0,z:0},build={blocks:[b],width:1,depth:1,height:1};return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});}
   function drawIcons(scope){if(typeof document==='undefined')return;for(const el of (scope||document).querySelectorAll('canvas[data-mat-icon]'))drawIcon(el,el.dataset.matIcon);}
-  return {styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor};
+  return {styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode};
 });
