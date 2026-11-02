@@ -240,11 +240,30 @@
     for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id);}ctx.globalAlpha=1;
     // Highlight is generated from the precise integer voxel coordinates, never AI image analysis.
     for(const b of highlighted.slice(0,64))drawOutline(ctx,b,project,scale,yaw,pitch);
+    if(!ready&&!opts.icon&&(opts.context==='guide'||opts.context==='hero')){
+      // Do not disguise untextured placeholders as actual Minecraft blocks.
+      const label='ORIGINALTEXTUREN NICHT GELADEN',sub='Minecraft-Java-Datei oben auswählen';
+      ctx.save();ctx.font='bold 11px system-ui,sans-serif';const width=Math.min(w-20,Math.max(205,(typeof ctx.measureText==='function'?ctx.measureText(label).width:label.length*7)+24));
+      ctx.fillStyle='rgba(19,30,26,.92)';ctx.fillRect(10,10,width,51);
+      ctx.fillStyle='#fff';ctx.fillText(label,19,30);ctx.font='10px system-ui,sans-serif';ctx.fillStyle='#dfece3';ctx.fillText(sub,19,47);
+      ctx.restore();
+    }
     if(chosen.length<blocks.length&&!opts.icon){ctx.font='600 11px system-ui,sans-serif';ctx.fillStyle='#243328';ctx.fillText(`Vorschau reduziert: ${chosen.length}/${blocks.length} Blöcke`,11,h-15);}
     if(!opts.icon&&!opts.hideBadge&&opts.context!=='guide'){ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(9,h-29,Math.min(w-18,225),20);ctx.fillStyle='#385343';ctx.font='700 10px system-ui,sans-serif';ctx.fillText(ready?(missing?`VANILLA + PLATZHALTER (${missing} MODELLE)`:'VANILLA · ORIGINALTEXTUREN'):'KEINE ORIGINAL-ASSETS',15,h-15);}
     return {rendered:chosen.length,faces:faces.length,missing,vanilla:ready,placeholder:!ready||missing>0};
   }
-  function drawIcon(canvas,type){const b={type,blockId:type,properties:{},x:0,y:0,z:0},build={blocks:[b],width:1,depth:1,height:1};return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});}
+  function drawIcon(canvas,type){
+    if(textureMode()!=='vanilla'){
+      // An honest missing-texture symbol, not a fabricated Minecraft item icon.
+      const ctx=canvas?.getContext?.('2d');if(!ctx)return {rendered:0,placeholder:true};
+      canvas.width=48;canvas.height=48;ctx.clearRect(0,0,48,48);ctx.fillStyle='#f3f5f4';ctx.fillRect(0,0,48,48);
+      ctx.strokeStyle='#8d9b95';ctx.lineWidth=2;ctx.strokeRect(1,1,46,46);
+      ctx.fillStyle='#45594d';ctx.font='bold 27px system-ui,sans-serif';ctx.textAlign='center';ctx.fillText('?',24,34);
+      return {rendered:0,placeholder:true};
+    }
+    const b={type,blockId:type,properties:{},x:0,y:0,z:0},build={blocks:[b],width:1,depth:1,height:1};
+    return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});
+  }
   function drawIcons(scope){if(typeof document==='undefined')return;for(const el of (scope||document).querySelectorAll('canvas[data-mat-icon]'))drawIcon(el,el.dataset.matIcon);}
   return {styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode};
 });
