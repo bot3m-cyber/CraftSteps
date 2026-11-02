@@ -6,7 +6,8 @@
 const MAX_ARCHIVE=140*1024*1024, MAX_ENTRIES=35000, MAX_ENTRY=6*1024*1024, MAX_JSON=512*1024;
 const BASE='assets/minecraft/';
 const pathOK=p=>/^assets\/minecraft\/(blockstates|models|textures)\/[a-z0-9_./-]+\.(json|png)$/.test(p)&&!p.includes('..');
-function stateId(b){return String(b?.blockId||b?.type||'minecraft:unknown').replace(/^minecraft:/,'').split('[')[0].replace(/[^a-z0-9_]/g,'');}
+const LEGACY_DEMO_IDS=Object.freeze({leaves:'oak_leaves',hay:'hay_block',moss:'moss_block',stone_slab:'stone_brick_slab'});
+function stateId(b){const id=String(b?.blockId||b?.type||'minecraft:unknown').replace(/^minecraft:/,'').split('[')[0].replace(/[^a-z0-9_]/g,'');return LEGACY_DEMO_IDS[id]||id;}
 function properties(b){if(b?.properties&&typeof b.properties==='object')return b.properties;const p={},m=/\[([^\]]+)\]/.exec(b?.blockState||'');if(m)for(const piece of m[1].split(',')){const [k,v]=piece.split('=');if(k&&v)p[k]=v;}return p;}
 function uint32(v,p){return v.getUint32(p,true);}function uint16(v,p){return v.getUint16(p,true);}
 function sanitizeName(value,kind){const clean=String(value||'').replace(/^minecraft:/,'');if(!/^[a-z0-9_./-]+$/.test(clean)||clean.includes('..')||clean.startsWith('/'))throw Error('Ungültiger Asset-Pfad');return BASE+kind+'/'+clean;}
