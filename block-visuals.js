@@ -123,12 +123,10 @@
   function faceShade(id){return id==='top'?0:id==='east'||id==='west'?0.15:0.26;}
   // Source image is an actual PNG decoded from the player's own Minecraft client JAR.
   // Java UV values are in a 16x16 coordinate system even when PNG resolution is higher.
-  function drawTextureFace(ctx,poly,texture,faceId,fallbackType){
-    const preview=typeof globalThis!=='undefined'?globalThis.CraftStepsPreviewVisuals:null;
-    const previewTexture=!texture?.image&&fallbackType&&preview?.tile?preview.tile(fallbackType,faceId==='top'?'top':'side'):null;
+  function drawTextureFace(ctx,poly,texture,faceId){
     polygon(ctx,poly);ctx.save();ctx.clip();
-    if(texture?.image||previewTexture){
-      const im=texture?.image||previewTexture,uv=texture?.uv||[0,0,16,16],unit=im.width/16;
+    if(texture?.image){
+      const im=texture.image,uv=texture.uv||[0,0,16,16],unit=im.width/16;
       const x=uv[0]*unit,y=uv[1]*unit,w=(uv[2]-uv[0])*unit,h=(uv[3]-uv[1])*unit;
       if(w>0&&h>0){
         ctx.transform((poly[1].x-poly[0].x)/16,(poly[1].y-poly[0].y)/16,(poly[3].x-poly[0].x)/16,(poly[3].y-poly[0].y)/16,poly[0].x,poly[0].y);
@@ -142,7 +140,7 @@
       ctx.fillStyle='#b7babe';ctx.fillRect(0,0,9999,9999);
     }
     ctx.restore();
-    if(texture?.image||previewTexture){const shade=faceShade(faceId);if(shade){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${shade})`;ctx.fill();}}
+    if(texture?.image){const shade=faceShade(faceId);if(shade){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${shade})`;ctx.fill();}}
     polygon(ctx,poly,'rgba(17,28,24,.18)',.45);
   }
   const FACES_BY_NAME={up:FACES[0],down:FACES[1],east:FACES[2],west:FACES[3],south:FACES[4],north:FACES[5]};
@@ -160,18 +158,19 @@
       for(const element of model.elements){
         const b=box(element.from[0]/16,element.from[1]/16,element.from[2]/16,element.to[0]/16,element.to[1]/16,element.to[2]/16);
         for(const [faceId,texture] of Object.entries(element.faces)){
-          const face=FACES_BY_NAME[faceId];if(!face||!texture?.image)continue;
-          if(opaqueSet&&texture.cullface){const d={north:[0,0,-1],south:[0,0,1],east:[1,0,0],west:[-1,0,0],up:[0,1,0],down:[0,-1,0]}[texture.cullface];if(d&&opaqueSet.has(`${block.x+d[0]}|${block.y+d[1]}|${block.z+d[2]}`))continue;}
+          const face=FACES_BY_NAME[faceId];if(!face||!texture)continue;
           let vertices=face.pts(b),normal=face.normal.slice();
           if(element.rotation){const origin=(element.rotation.origin||[8,8,8]).map(x=>x/16);
             vertices=vertices.map(v=>rotatePoint(v,element.rotation.axis,element.rotation.angle,origin));
             normal=rotatePoint(normal,element.rotation.axis,element.rotation.angle,[0,0,0]);}
           if(model.rotation.x){vertices=vertices.map(v=>rotatePoint(v,'x',model.rotation.x,[.5,.5,.5]));normal=rotatePoint(normal,'x',model.rotation.x,[0,0,0]);}
           if(model.rotation.y){vertices=vertices.map(v=>rotatePoint(v,'y',model.rotation.y,[.5,.5,.5]));normal=rotatePoint(normal,'y',model.rotation.y,[0,0,0]);}
+          if(opaqueSet&&texture.cullface){let d={north:[0,0,-1],south:[0,0,1],east:[1,0,0],west:[-1,0,0],up:[0,1,0],down:[0,-1,0]}[texture.cullface];if(model.rotation.x)d=rotatePoint(d,'x',model.rotation.x,[0,0,0]);if(model.rotation.y)d=rotatePoint(d,'y',model.rotation.y,[0,0,0]);d=d?.map(n=>Math.round(n));if(d&&opaqueSet.has(`${block.x+d[0]}|${block.y+d[1]}|${block.z+d[2]}`))continue;}
           if(!faceVisible({normal},yaw,pitch))continue;
           const world=vertices.map(v=>[v[0]+block.x,v[1]+block.y,v[2]+block.z]);
           const avg=world.reduce((sum,v)=>sum.map((n,i)=>n+v[i]/4),[0,0,0]);
-          out.push({poly:world.map(p=>project(...p)),depth:depth(...avg),texture,id:face.id,alpha:1});
+          const mapped=model.uvlock&&model.rotation.y?{...texture,rotation:(texture.rotation-model.rotation.y+360)%360}:texture;
+          out.push({poly:world.map(p=>project(...p)),depth:depth(...avg),texture:mapped,id:face.id,alpha:1});
         }
       }
     }return out;
@@ -179,30 +178,14 @@
   function drawOutline(ctx,block,project,scale,yaw,pitch){
     const x=block.x,y=block.y,z=block.z;
     const all=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]].map(([a,b,c])=>project(x+a,y+b,z+c));
-    const faceSets=[
-      {face:FACES[0],ids:[2,3,7,6]},
-      {face:FACES[2],ids:[1,5,7,3]},
-      {face:FACES[3],ids:[4,0,2,6]},
-      {face:FACES[4],ids:[5,4,6,7]},
-      {face:FACES[5],ids:[0,1,3,2]}
-    ];
-    const dedup=new Set(),edges=[];
-    for(const entry of faceSets){if(!faceVisible(entry.face,yaw,pitch))continue;
-      for(let i=0;i<4;i++){const a=entry.ids[i],b=entry.ids[(i+1)%4];const key=[a,b].sort((x,y)=>x-y).join('-');if(!dedup.has(key)){dedup.add(key);edges.push([a,b]);}}}
-    // Fall back to all edges if camera is nearly edge-on.
-    if(!edges.length)edges.push([0,1],[0,2],[0,4]);
+    const edges=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
     ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
     for(const [i,j] of edges){ctx.beginPath();ctx.moveTo(all[i].x,all[i].y);ctx.lineTo(all[j].x,all[j].y);ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=Math.max(2.4,Math.min(5,scale*.13));ctx.stroke();ctx.strokeStyle='#ed3537';ctx.lineWidth=Math.max(1.35,Math.min(3,scale*.073));ctx.stroke();}
     ctx.restore();
   }
-  function textureMode(){return assets()?.info().ready?'vanilla':'preview';}
+  function textureMode(){const info=assets()?.info();return info?.ready?'vanilla':info?.status==='loading'?'loading':'missing';}
   function draw(canvas,build,opts={}){
     if(!canvas||!build||!canvas.getContext)return {rendered:0};
-    // Keep mobile guides readable without a Java JAR, but label the preview as non-vanilla.
-    if(textureMode()==='preview'){
-      const preview=typeof globalThis!=='undefined'?globalThis.CraftStepsPreviewVisuals:null;
-      if(preview?.draw){const result=preview.draw(canvas,build,opts);return {...result,vanilla:false,preview:true};}
-    }
     const ctx=canvas.getContext('2d');if(!ctx)return {rendered:0};
     const rect=canvas.getBoundingClientRect(),w=opts.icon?48:Math.max(1,rect.width),h=opts.icon?48:Math.max(1,rect.height);
     if(!opts.icon&&(w<4||h<4))return {rendered:0};
@@ -241,12 +224,12 @@
       }
     }
     faces.sort((a,b)=>a.depth-b.depth);
-    for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id,f.type);}ctx.globalAlpha=1;
+    for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id);}ctx.globalAlpha=1;
     // Highlight is generated from the precise integer voxel coordinates, never AI image analysis.
     for(const b of highlighted.slice(0,64))drawOutline(ctx,b,project,scale,yaw,pitch);
     if(chosen.length<blocks.length&&!opts.icon){ctx.font='600 11px system-ui,sans-serif';ctx.fillStyle='#243328';ctx.fillText(`Vorschau reduziert: ${chosen.length}/${blocks.length} Blöcke`,11,h-15);}
-    if(!opts.icon&&!opts.hideBadge&&opts.context!=='guide'){ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(9,h-29,Math.min(w-18,205),20);ctx.fillStyle='#385343';ctx.font='700 10px system-ui,sans-serif';ctx.fillText(ready?(missing?`VANILLA + VORSCHAU (${missing} BLOCK-MODELLE)`:'VANILLA · ORIGINALTEXTUREN'):'ORIGINALTEXTUREN LADEN',15,h-15);}
-    return {rendered:chosen.length,faces:faces.length,missing,vanilla:ready};
+    if(!opts.icon&&!opts.hideBadge&&opts.context!=='guide'){ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(9,h-29,Math.min(w-18,225),20);ctx.fillStyle='#385343';ctx.font='700 10px system-ui,sans-serif';ctx.fillText(ready?(missing?`VANILLA + PLATZHALTER (${missing} MODELLE)`:'VANILLA · ORIGINALTEXTUREN'):'KEINE ORIGINAL-ASSETS',15,h-15);}
+    return {rendered:chosen.length,faces:faces.length,missing,vanilla:ready,placeholder:!ready||missing>0};
   }
   function drawIcon(canvas,type){const b={type,blockId:type,properties:{},x:0,y:0,z:0},build={blocks:[b],width:1,depth:1,height:1};return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});}
   function drawIcons(scope){if(typeof document==='undefined')return;for(const el of (scope||document).querySelectorAll('canvas[data-mat-icon]'))drawIcon(el,el.dataset.matIcon);}

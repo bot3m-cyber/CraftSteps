@@ -5,14 +5,14 @@ CraftSteps ist eine unabhängige, frei zugängliche Schritt-für-Schritt-Bauanle
 **Live:** https://bot3m-cyber.github.io/CraftSteps/  
 **Importstudio:** https://bot3m-cyber.github.io/CraftSteps/studio.html
 
-## V0.4 – echte Originaltexturen aus der eigenen Minecraft-Java-Datei
+## V0.5 – originale Assets aus der eigenen Minecraft-Java-Datei
 
-CraftSteps verwendet für die 3D-Vorschau **die originalen Vanilla-Textur-PNGs und Blockmodell-JSON-Dateien aus der Java-Clientdatei, die du selbst im Browser auswählst**. Die bisher erfundenen Pixeltexturen wurden als Darstellung entfernt; ohne ausgewählte Minecraft-Datei erscheinen **als Ersatz gekennzeichnete, selbst erzeugte Pixel-Vorschautexturen**.. Der Webserver und das öffentliche GitHub-Repository enthalten **keine Minecraft-Spieltexturen, keine extrahierten Mojang-Dateien und keine eingebettete Client-JAR**.
+CraftSteps verwendet für die 3D-Ansicht **ausschließlich die originalen Vanilla-Textur-PNGs, Blockmodelle und Blockstates aus einer Datei, die du selbst lokal auswählst**. Ohne diese Datei erscheinen nur klar gekennzeichnete, einfarbig-neutrale Platzhalter – keine nachgemalten oder angeblich originalen Texturen. Der Webserver und das öffentliche GitHub-Repository enthalten **keine Minecraft-Spieltexturen, keine extrahierten Mojang-Dateien und keine eingebettete Client-JAR**.
 
 ### Originale Minecraft-Java-Assets aktivieren
 
-1. Öffne die CraftSteps-Galerie oder das Studio und wähle oben **„Minecraft-Client (.jar) auswählen“**.
-2. Suche unter Windows im Dateimanager nach `%APPDATA%\.minecraft\versions\<Version>\<Version>.jar` (z. B. unter `1.21.1/1.21.1.jar`). Unter Linux/macOS findest du die Datei entsprechend im `.minecraft/versions/`-Ordner deines Minecraft-Launchers. Eine vollständige Vanilla-Java-Client-JAR ist erforderlich, kein reines Texturpaket.
+1. Öffne die CraftSteps-Galerie oder das Studio und wähle oben **„Client-JAR oder Vanilla-ZIP auswählen“**.
+2. Wähle entweder eine Minecraft-Java-Client-JAR aus `.minecraft/versions/<Version>/<Version>.jar` oder ein vollständiges Vanilla-Resource-Pack-ZIP, das `assets/minecraft/blockstates`, `models` und `textures` enthält. Ein nur teilweise überschreibendes Resource Pack reicht nicht aus.
 3. CraftSteps liest die Originaldatei **nur lokal im Browser**. Es verarbeitet daraus die Vanilla-Blockstates, Modellvererbungen, Varianten, Multipart-Modelle und Textur-PNGs. Sie werden nicht an einen Server übertragen und nicht öffentlich geteilt.
 4. Die Datei wird – sofern dein Browser genügend lokalen Speicher hat – nur in diesem Browser in IndexedDB hinterlegt und beim nächsten Besuch wieder gelesen. Mit **„Entfernen“** löschst du diesen lokalen Eintrag.
 
@@ -59,7 +59,7 @@ Es gibt **keine externen Laufzeitbibliotheken**. Node.js >=20 erforderlich. GitH
 | Datei | Aufgabe |
 | --- | --- |
 | `index.html`, `app.js`, `styles.css` | Galerie, Bauanleitungen und Materialansichten |
-| `block-visuals.js` | 3D-Canvas-Darstellung mit geladenen Vanilla-Modellen/Originaltexturen |
+| `block-visuals.js` | 3D-Canvas-Darstellung mit geladenen Vanilla-Modellen/Originaltexturen; neutrale Platzhalter bei fehlenden Assets |
 | `vanilla-assets.js`, `assets-ui.js` | Sicher begrenzter ZIP-Import aus der eigenen Minecraft-Java-JAR und browserlokale Auswahl |
 | `core.js` | Blockdaten, Mengenberechnung und Schritt-Engine |
 | `studio.html`, `studio.js`, `studio.css` | Private Import-/Entwurfsoberfläche mit drehbarer 3D-Vorschau |
@@ -71,5 +71,8 @@ Es gibt **keine externen Laufzeitbibliotheken**. Node.js >=20 erforderlich. GitH
 Das Studio enthält keine geheimen Schlüssel, Anmeldung oder serverseitige Berechtigungen. Der Import wird nicht öffentlich geteilt. Copyright- und Markenrechte an Minecraft bleiben bei den jeweiligen Rechteinhabern.
 
 
-## V0.4.1 – Textureless-Regression auf mobilen Geräten behoben
-Wenn keine Minecraft-Java-Clientdatei verfügbar ist, stellt CraftSteps die Bauwerke und Material-Icons nicht mehr als vollständig graue Würfel dar. Stattdessen wird **eine ausdrücklich gekennzeichnete, selbst erzeugte Pixel-Vorschau** angezeigt. **Diese Vorschau enthält keine originalen Minecraft-Texturen.** Im Bauschritt führt ein neuer Button direkt zur lokalen Dateiauswahl; nach erfolgreichem Laden nutzt CraftSteps die originalen PNGs aus der eigenen Java-JAR. Fehlende Vanilla-Modelle erhalten eine Ersatzvorschau und werden als unvollständig gekennzeichnet. Keine Dateien werden an den Server hochgeladen oder von CraftSteps verteilt.
+## V0.5 – keine nachgebauten Minecraft-Texturen
+
+Der frühere Pixel-Fallback wurde aus Laufzeitcode, HTML und Deployment entfernt. Material-Icons und Blockflächen nutzen nach dem Import dieselbe originale Asset-Pipeline. Ohne lokale Assets oder bei einem fehlenden Modell bleibt die Fläche neutral grau und die Oberfläche nennt die Einschränkung ausdrücklich. Blockstate-Varianten und Multipart-Modelle werden ausgewertet; gewichtete Varianten werden deterministisch nach Position gewählt, implizite Vanilla-UVs werden berechnet und Modellrotationen werden auf Geometrie und Sichtbarkeit angewandt.
+
+Das ist bewusst keine Behauptung vollständiger Pixelgleichheit mit Minecraft. Biomeinfärbung, Flüssigkeiten, animierte Texturen, Entity-Renderer, Render-Layer und einzelne komplexe Sondermodelle bleiben begrenzt. Auf Mobilgeräten kann eine Client-JAR nicht automatisch aus einer Desktop-Installation gelesen werden; der Nutzer muss eine rechtmäßig vorhandene Datei lokal auswählen. CraftSteps lädt und veröffentlicht sie nicht.

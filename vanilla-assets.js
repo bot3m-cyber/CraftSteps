@@ -48,9 +48,19 @@ class ZipArchive {
  async json(path){const e=this.entries.get(path);if(!e)return null;if(e.raw>MAX_JSON)throw Error('Modelldatei zu groß');const bytes=await this.bytes(path);return JSON.parse(new TextDecoder().decode(bytes));}
 }
 function testWhen(when,props){if(!when)return true;if(Array.isArray(when.OR))return when.OR.some(w=>testWhen(w,props));if(Array.isArray(when.AND))return when.AND.every(w=>testWhen(w,props));return Object.entries(when).every(([key,value])=>String(value).split('|').includes(String(props[key]??'')));}
-function chooseVariants(spec,props){if(!spec||typeof spec!=='object')return [];const arr=[];if(spec.variants){const keys=Object.keys(spec.variants);const match=keys.filter(k=>k===''||testWhen(Object.fromEntries(k.split(',').map(s=>s.split('='))),props)).sort((a,b)=>b.length-a.length)[0];if(match!==undefined){const val=spec.variants[match];arr.push(...(Array.isArray(val)?val.slice(0,1):[val]));}else if(!Object.keys(props).length&&keys.length){const val=spec.variants[keys[0]];arr.push(...(Array.isArray(val)?val.slice(0,1):[val]));}}
- if(spec.multipart)for(const entry of spec.multipart){if(testWhen(entry.when,props)){const value=entry.apply;arr.push(...(Array.isArray(value)?value.slice(0,1):[value]));}}return arr.filter(x=>x&&typeof x.model==='string').slice(0,24);}
+function hashSeed(value){let h=2166136261;for(const c of String(value))h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;}
+function weighted(value,seed){const values=Array.isArray(value)?value:[value];if(values.length<2)return values[0];const total=values.reduce((n,v)=>n+Math.max(1,Number(v?.weight)||1),0);let pick=hashSeed(seed)%total;for(const v of values){pick-=Math.max(1,Number(v?.weight)||1);if(pick<0)return v;}return values[0];}
+function chooseVariants(spec,props,seed='0'){if(!spec||typeof spec!=='object')return [];const arr=[];if(spec.variants){const keys=Object.keys(spec.variants);const match=keys.filter(k=>k===''||testWhen(Object.fromEntries(k.split(',').map(s=>s.split('='))),props)).sort((a,b)=>b.length-a.length)[0];if(match!==undefined)arr.push(weighted(spec.variants[match],seed+'|variant'));else if(!Object.keys(props).length&&keys.length)arr.push(weighted(spec.variants[keys[0]],seed+'|default'));}
+ if(spec.multipart)for(let i=0;i<spec.multipart.length;i++){const entry=spec.multipart[i];if(testWhen(entry.when,props))arr.push(weighted(entry.apply,seed+'|multipart|'+i));}return arr.filter(x=>x&&typeof x.model==='string').slice(0,24);}
 function resolveTexture(tag,textureMap){let t=tag;const seen=new Set();while(typeof t==='string'&&t.startsWith('#')){const key=t.slice(1);if(seen.has(key))return null;seen.add(key);t=textureMap[key];}if(!t||typeof t!=='string')return null;try{return sanitizeName(t,'textures')+'.png';}catch{return null;}}
+function defaultUV(face,from,to){switch(face){
+ case 'down':return [from[0],16-to[2],to[0],16-from[2]];
+ case 'up':return [from[0],from[2],to[0],to[2]];
+ case 'north':return [16-to[0],16-to[1],16-from[0],16-from[1]];
+ case 'south':return [from[0],16-to[1],to[0],16-from[1]];
+ case 'west':return [from[2],16-to[1],to[2],16-from[1]];
+ case 'east':return [16-to[2],16-to[1],16-from[2],16-from[1]];
+ default:return [0,0,16,16];}}
 class AssetManager {
  constructor(){this.zip=null;this.status='none';this.source='';this.errors=[];this.jsonCache=new Map();this.dataCache=new Map();this.imageCache=new Map();this.callbacks=new Set();this.pending=new Set();this.processing=null;this.restoring=null;this.version='';}
  subscribe(fn){this.callbacks.add(fn);return ()=>this.callbacks.delete(fn);}
@@ -69,23 +79,24 @@ class AssetManager {
   return {textures:{...(base?.textures||{}),...(json.textures||{})},elements:json.elements??base?.elements??[],ambientocclusion:json.ambientocclusion??base?.ambientocclusion??true};
  }
  async image(path){if(!path||!this.zip?.has(path))return null;if(this.imageCache.has(path))return this.imageCache.get(path);const bytes=await this.zip.bytes(path);const bitmap=typeof createImageBitmap==='function'?await createImageBitmap(new Blob([bytes],{type:'image/png'})):await new Promise((resolve,reject)=>{const blobUrl=URL.createObjectURL(new Blob([bytes],{type:'image/png'})),img=new Image();img.onload=()=>{URL.revokeObjectURL(blobUrl);resolve(img);};img.onerror=()=>{URL.revokeObjectURL(blobUrl);reject(Error('PNG kann nicht gelesen werden'));};img.src=blobUrl;});this.imageCache.set(path,bitmap);return bitmap;}
- async build(block){const type=stateId(block),props=properties(block);const spec=await this.json(BASE+'blockstates/'+type+'.json');if(!spec)return null;const selectors=chooseVariants(spec,props);const output=[];
+ async build(block){const type=stateId(block),props=properties(block);const spec=await this.json(BASE+'blockstates/'+type+'.json');if(!spec)return null;const seed=[type,block?.x||0,block?.y||0,block?.z||0].join('|'),selectors=chooseVariants(spec,props,seed);const output=[];
   for(const selected of selectors){const m=await this.model(selected.model);if(!m)continue;const elements=[];
    for(const e of m.elements.slice(0,64)){
      if(!Array.isArray(e.from)||!Array.isArray(e.to)||e.from.length!==3||e.to.length!==3)continue;
      const faces={};for(const [face,cfg] of Object.entries(e.faces||{})){
-       const path=resolveTexture(cfg.texture,m.textures);if(!path)continue;const image=await this.image(path);if(!image)continue;
-       faces[face]={image,uv:cfg.uv,rotation:cfg.rotation||0,tintindex:cfg.tintindex??-1,cullface:cfg.cullface||null};
+       const path=resolveTexture(cfg.texture,m.textures);if(!path)continue;const image=await this.image(path);
+       if(!image&&this.errors.length<20)this.errors.push(type+': Originaltextur fehlt: '+path);
+       faces[face]={image,uv:Array.isArray(cfg.uv)?cfg.uv:defaultUV(face,e.from,e.to),rotation:cfg.rotation||0,tintindex:cfg.tintindex??-1,cullface:cfg.cullface||null};
      }
      if(Object.keys(faces).length)elements.push({from:e.from,to:e.to,faces,rotation:e.rotation||null,shade:e.shade!==false});
    }
    if(elements.length)output.push({elements,rotation:{x:selected.x||0,y:selected.y||0},uvlock:!!selected.uvlock});
   }return output.length?output:null;
  }
- key(block){const p=properties(block);return stateId(block)+'['+Object.entries(p).sort(([a],[b])=>a.localeCompare(b)).map(([a,b])=>a+'='+b).join(',')+']';}
+ key(block){const p=properties(block),type=stateId(block),variant=hashSeed([type,block?.x||0,block?.y||0,block?.z||0].join('|'))%16;return type+'['+Object.entries(p).sort(([a],[b])=>a.localeCompare(b)).map(([a,b])=>a+'='+b).join(',')+']@'+variant;}
  get(block){return this.dataCache.get(this.key(block))||null;}
- async ensure(blocks){if(!this.zip||!Array.isArray(blocks))return;const unique=new Map();for(const b of blocks){const key=this.key(b);if(!unique.has(key))unique.set(key,b);}const keys=[...unique.keys()].slice(0,350);
-  const queue=keys.filter(k=>!this.dataCache.has(k)&&!this.pending.has(k));if(!queue.length)return;
+ async ensure(blocks){if(!this.zip||!Array.isArray(blocks))return;const unique=new Map();for(const b of blocks){const key=this.key(b);if(!unique.has(key))unique.set(key,b);}const keys=[...unique.keys()];
+  const queue=keys.filter(k=>!this.dataCache.has(k)&&!this.pending.has(k)).slice(0,1200);if(!queue.length)return;
   const workers=Array.from({length:Math.min(5,queue.length)},async()=>{while(queue.length){const key=queue.shift(),block=unique.get(key);this.pending.add(key);try{this.dataCache.set(key,await this.build(block)||[]);}catch(e){this.dataCache.set(key,[]);if(this.errors.length<20)this.errors.push(key+': '+e.message);}finally{this.pending.delete(key);}}});await Promise.all(workers);this.notify();
  }
 }
@@ -95,5 +106,5 @@ async function withDB(mode,operation){const db=await openDB();try{return await n
 function savedFile(){if(!indexedDBAvailable())return null;return withDB('readonly',s=>s.get('vanilla'));}
 function persistFile(file){return withDB('readwrite',s=>s.put(file,'vanilla'));}
 function deleteFile(){if(!indexedDBAvailable())return Promise.resolve();return withDB('readwrite',s=>s.delete('vanilla'));}
-const manager=new AssetManager();return {ZipArchive,AssetManager,manager,chooseVariants,testWhen,resolveTexture,stateId,properties};
+const manager=new AssetManager();return {ZipArchive,AssetManager,manager,chooseVariants,testWhen,resolveTexture,defaultUV,stateId,properties};
 });
