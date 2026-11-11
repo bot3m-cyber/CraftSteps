@@ -114,7 +114,7 @@
     const spanX=build.width||Math.max(1,...blocks.map(b=>b.x+1));
     const spanZ=build.depth||Math.max(1,...blocks.map(b=>b.z+1));
     const focus=boundsFor(opts.focus);
-    const pad=focus?.75:0;
+    const pad=focus ? 0.75 : 0;
     const frame=focus?{
       minX:focus.minX-pad,minY:focus.minY-pad,minZ:focus.minZ-pad,
       maxX:focus.maxX+pad,maxY:focus.maxY+pad,maxZ:focus.maxZ+pad
@@ -238,7 +238,8 @@
     const blocks=opts.blocks||build.blocks, highlighted=opts.highlight||[];
     // Deliberate rendering budget keeps a malformed import from freezing mobile browsers.
     const limit=opts.icon?1:(opts.limit|| (w<350?1400:4000));
-    const chosen=blocks.length>limit?blocks.filter((b,i)=>i%Math.ceil(blocks.length/limit)===0):blocks;
+    const chosenRaw=blocks.length>limit?blocks.filter((b,i)=>i%Math.ceil(blocks.length/limit)===0):blocks;
+    const chosen=globalThis.CraftStepsAssets?.withContext?.(chosenRaw)||chosenRaw;
     if(!opts.transparent){const sx=build.width||1,sz=build.depth||1,grid=[];for(let a of [0,sx])for(let b of [0,sz])grid.push(project(a,-.02,b));
       ctx.beginPath();let p=project(0,-.03,0);ctx.moveTo(p.x,p.y);for(let [a,b] of [[sx,0],[sx,sz],[0,sz],[0,0]]){p=project(a,-.03,b);ctx.lineTo(p.x,p.y);}ctx.fillStyle='rgba(110,159,93,.45)';ctx.fill();ctx.strokeStyle='rgba(70,110,68,.45)';ctx.lineWidth=.8;ctx.stroke();
       if(sx<=32&&sz<=32) {ctx.strokeStyle='rgba(58,93,62,.15)';ctx.lineWidth=.5;for(let x=0;x<=sx;x++){const a=project(x,0,0),b=project(x,0,sz);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}for(let z=0;z<=sz;z++){const a=project(0,0,z),b=project(sx,0,z);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}}
