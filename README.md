@@ -85,3 +85,13 @@ Das ist bewusst keine Behauptung vollständiger Pixelgleichheit mit Minecraft. B
 So geht es: Am PC die passende Java-Clientdatei `%APPDATA%\\.minecraft\\versions\\<VERSION>\\<VERSION>.jar` über **„Original-Minecraft-Datei auswählen“** laden. Auf Android zunächst dieselbe Datei vom eigenen PC auf das Handy übertragen und in CraftSteps über den Dateidialog auswählen. Alles wird nur im Browser gelesen und möglichst lokal gespeichert; auf anderen Geräten muss die Datei erneut ausgewählt werden.
 
 Die eingebauten Demoblöcke `leaves`, `hay`, `moss` und `stone_slab` werden jetzt den tatsächlichen Java-Block-IDs zugeordnet. Das verbessert die Abdeckung nach dem Laden des richtigen Java-Archivs. Für vollständige Pixelgenauigkeit bei komplexen Blockstates ist weitere Renderer-Arbeit nötig; V0.4.2 garantiert ausdrücklich nicht 100 % korrekt gerenderte Blöcke.
+
+## V0.5.0 – geführte 3D-Kamera und verbesserte Blockstates
+
+- In der Bauanleitung wird die **Kamera automatisch auf die neu zu platzierenden Blöcke** zentriert, wobei die Rohblockkoordinaten verwendet werden. Beim Klick auf „Weiter“ oder „Zurück“ springt die Seite zur 3D-Ansicht zurück.
+- Der Schalter **„Gesamtes Bauwerk“ / „Schritt fokussieren“** erlaubt den Wechsel zwischen Überblick und dem aktuellen Bauschritt.
+- **„Unterseite ansehen“** richtet die Kamera unter die Plattform aus; durch Ziehen kann man jetzt auch negative Neigungswinkel nutzen. „Von oben ansehen“ stellt eine erhöhte Ansicht wieder her.
+- Eingebaute ältere Beispiel-Bauwerke erhalten beim Vanilla-Asset-Import korrekte Standardzustände für Türen, Stufen, Logs und Laternen. Verbindungen zwischen direkt benachbarten gleichartigen Zäunen/Glasscheiben können bei zustandslosen Beispielen bestimmt werden. Explizite Eigenschaften importierter Bauwerke werden nicht überschrieben.
+- Der lokale Textur-Loader versucht bei `createImageBitmap`-Problemen auch die Browser-Bilddekodierung.
+
+**Einschränkung:** Die originale Minecraft-Optik benötigt weiterhin die vom Nutzer lokal ausgewählte Minecraft-Java-Datei. Keine Mojang-Texturen sind in CraftSteps oder im Repository enthalten. Nicht jeder Vanilla-Blockzustand ist bereits vollständig gerendert. Die Canvas-Vorschau ist noch kein vollständiger Minecraft-Renderer; komplexe Blockmodelle, besondere Tint-Farben, Biome und Block-Entities können abweichen.
