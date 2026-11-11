@@ -45,3 +45,21 @@ test('demo block names resolve to actual vanilla models without fabricated textu
  assert.equal(stateId({type:'stone_bricks'}),'stone_bricks');
  assert.equal(stateId({blockId:'minecraft:oak_planks',type:'oak_planks'}),'oak_planks');
 });
+
+test('demo multi-blocks get valid missing states while imported states are kept',()=>{
+ const {properties}=require('../vanilla-assets.js');
+ assert.deepEqual(properties({type:'oak_door',part:'upper'}),{facing:'north',half:'upper',hinge:'left',open:'false',powered:'false'});
+ assert.equal(properties({type:'oak_door',part:'lower',properties:{facing:'east',half:'lower',hinge:'right',open:'true'}}).facing,'east');
+ assert.equal(properties({type:'stone_slab'}).type,'bottom');
+ assert.equal(properties({type:'spruce_log'}).axis,'y');
+ assert.equal(properties({type:'lantern'}).hanging,'false');
+});
+test('missing demo fence connections are derived from adjacent block coordinates',()=>{
+ const {withContext}=require('../vanilla-assets.js');
+ const connected=withContext([{type:'oak_fence',x:0,y:1,z:0},{type:'oak_fence',x:1,y:1,z:0}]);
+ assert.equal(connected[0].properties.east,'true');
+ assert.equal(connected[1].properties.west,'true');
+ assert.equal(connected[0].properties.north,'false');
+ const explicit=withContext([{type:'oak_fence',x:2,y:1,z:0,properties:{east:'false',west:'true'}}]);
+ assert.equal(explicit[0].properties.east,'false');
+});
