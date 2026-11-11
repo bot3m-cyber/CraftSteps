@@ -95,20 +95,46 @@
     return full;
   }
   function isFullCube(block){const type=rawName(block);return modelFor(block).length===1 && Object.values(modelFor(block)[0]).every(v=>v===0||v===1) && styleOf(type)!=='glass'&&styleOf(type)!=='water'&&styleOf(type)!=='leaves';}
+  // Camera bounds come from real block coordinates, never from image analysis.
+  function boundsFor(blocks){
+    if(!Array.isArray(blocks)||!blocks.length)return null;
+    const result={minX:Infinity,minY:Infinity,minZ:Infinity,maxX:-Infinity,maxY:-Infinity,maxZ:-Infinity};
+    for(const b of blocks){
+      if(!Number.isFinite(b.x)||!Number.isFinite(b.y)||!Number.isFinite(b.z))continue;
+      result.minX=Math.min(result.minX,b.x);result.minY=Math.min(result.minY,b.y);result.minZ=Math.min(result.minZ,b.z);
+      result.maxX=Math.max(result.maxX,b.x+1);result.maxY=Math.max(result.maxY,b.y+1);result.maxZ=Math.max(result.maxZ,b.z+1);
+    }
+    return Number.isFinite(result.minX)?result:null;
+  }
   function makeProject(width,height,build,opts={}){
-    const yaw=opts.yaw??PI/4, pitch=mathClamp(opts.pitch??0.56,.20,1.35),zoom=mathClamp(opts.zoom??1,.45,3);
+    // Negative elevation lets the user view the underside of a platform.
+    const yaw=opts.yaw??PI/4,pitch=mathClamp(opts.pitch??.56,-1.42,1.42),zoom=mathClamp(opts.zoom??1,.45,3);
     const blocks=build.blocks||[];
     const maxY=build.height||Math.max(1,...blocks.map(b=>b.y+1));
     const spanX=build.width||Math.max(1,...blocks.map(b=>b.x+1));
     const spanZ=build.depth||Math.max(1,...blocks.map(b=>b.z+1));
-    const center={x:spanX/2,y:maxY/2,z:spanZ/2};
-    function unit(x,y,z){const a=x-center.x,c=z-center.z,b=y-center.y;return {x:a*Math.cos(yaw)-c*Math.sin(yaw),y:(a*Math.sin(yaw)+c*Math.cos(yaw))*Math.sin(pitch)-b*Math.cos(pitch)};}
-    const corners=[];for(let x of [0,spanX])for(let y of [0,maxY])for(let z of [0,spanZ])corners.push(unit(x,y,z));
+    const focus=boundsFor(opts.focus);
+    const pad=focus ? 0.75 : 0;
+    const frame=focus?{
+      minX:focus.minX-pad,minY:focus.minY-pad,minZ:focus.minZ-pad,
+      maxX:focus.maxX+pad,maxY:focus.maxY+pad,maxZ:focus.maxZ+pad
+    }:{minX:0,minY:0,minZ:0,maxX:spanX,maxY:maxY,maxZ:spanZ};
+    const center={x:(frame.minX+frame.maxX)/2,y:(frame.minY+frame.maxY)/2,z:(frame.minZ+frame.maxZ)/2};
+    function unit(x,y,z){
+      const a=x-center.x,c=z-center.z,b=y-center.y;
+      return {x:a*Math.cos(yaw)-c*Math.sin(yaw),y:(a*Math.sin(yaw)+c*Math.cos(yaw))*Math.sin(pitch)-b*Math.cos(pitch)};
+    }
+    const corners=[];
+    for(const x of [frame.minX,frame.maxX])for(const y of [frame.minY,frame.maxY])for(const z of [frame.minZ,frame.maxZ])corners.push(unit(x,y,z));
     const minX=Math.min(...corners.map(p=>p.x)),maxX=Math.max(...corners.map(p=>p.x));
-    const minScreenY=Math.min(...corners.map(p=>p.y)),maxScreenY=Math.max(...corners.map(p=>p.y));
-    const scale=mathClamp(Math.min((width*.81)/Math.max(1,maxX-minX),(height*.73)/Math.max(1,maxScreenY-minScreenY))*zoom,1,125);
-    const ox=width/2-(minX+maxX)*scale/2,oy=height*.54-(minScreenY+maxScreenY)*scale/2;
-    return {project:(x,y,z)=>{const p=unit(x,y,z);return {x:p.x*scale+ox,y:p.y*scale+oy};},depth:(x,y,z)=>(x-center.x)*Math.sin(yaw)*Math.cos(pitch)+(z-center.z)*Math.cos(yaw)*Math.cos(pitch)+(y-center.y)*Math.sin(pitch),scale,yaw,pitch};
+    const minY=Math.min(...corners.map(p=>p.y)),maxScreenY=Math.max(...corners.map(p=>p.y));
+    const scale=mathClamp(Math.min((width*.81)/Math.max(1,maxX-minX),(height*.72)/Math.max(1,maxScreenY-minY))*zoom,1,125);
+    const ox=width/2-(minX+maxX)*scale/2,oy=height*.54-(minY+maxScreenY)*scale/2;
+    return {
+      project:(x,y,z)=>{const p=unit(x,y,z);return {x:p.x*scale+ox,y:p.y*scale+oy};},
+      depth:(x,y,z)=>(x-center.x)*Math.sin(yaw)*Math.cos(pitch)+(z-center.z)*Math.cos(yaw)*Math.cos(pitch)+(y-center.y)*Math.sin(pitch),
+      scale,yaw,pitch,center,focused:!!focus
+    };
   }
   const FACES=[
     {id:'top',normal:[0,1,0],pts:s=>[[s.x0,s.y1,s.z0],[s.x1,s.y1,s.z0],[s.x1,s.y1,s.z1],[s.x0,s.y1,s.z1]]},
@@ -208,11 +234,12 @@
     if(!opts.transparent){
       const grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'#c8e1e9');grad.addColorStop(.64,'#e5edf0');grad.addColorStop(.641,'#b9d39b');grad.addColorStop(1,'#82a974');ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
     }else{ctx.clearRect(0,0,w,h);}
-    const {project,depth,scale,yaw,pitch}=makeProject(w,h,build,{yaw:opts.yaw,pitch:opts.pitch,zoom:opts.icon?1.45:opts.zoom});
+    const {project,depth,scale,yaw,pitch}=makeProject(w,h,build,{yaw:opts.yaw,pitch:opts.pitch,zoom:opts.icon?1.45:opts.zoom,focus:opts.followStep?opts.highlight:null});
     const blocks=opts.blocks||build.blocks, highlighted=opts.highlight||[];
     // Deliberate rendering budget keeps a malformed import from freezing mobile browsers.
     const limit=opts.icon?1:(opts.limit|| (w<350?1400:4000));
-    const chosen=blocks.length>limit?blocks.filter((b,i)=>i%Math.ceil(blocks.length/limit)===0):blocks;
+    const chosenRaw=blocks.length>limit?blocks.filter((b,i)=>i%Math.ceil(blocks.length/limit)===0):blocks;
+    const chosen=globalThis.CraftStepsAssets?.withContext?.(chosenRaw)||chosenRaw;
     if(!opts.transparent){const sx=build.width||1,sz=build.depth||1,grid=[];for(let a of [0,sx])for(let b of [0,sz])grid.push(project(a,-.02,b));
       ctx.beginPath();let p=project(0,-.03,0);ctx.moveTo(p.x,p.y);for(let [a,b] of [[sx,0],[sx,sz],[0,sz],[0,0]]){p=project(a,-.03,b);ctx.lineTo(p.x,p.y);}ctx.fillStyle='rgba(110,159,93,.45)';ctx.fill();ctx.strokeStyle='rgba(70,110,68,.45)';ctx.lineWidth=.8;ctx.stroke();
       if(sx<=32&&sz<=32) {ctx.strokeStyle='rgba(58,93,62,.15)';ctx.lineWidth=.5;for(let x=0;x<=sx;x++){const a=project(x,0,0),b=project(x,0,sz);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}for(let z=0;z<=sz;z++){const a=project(0,0,z),b=project(sx,0,z);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}}
@@ -265,5 +292,5 @@
     return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});
   }
   function drawIcons(scope){if(typeof document==='undefined')return;for(const el of (scope||document).querySelectorAll('canvas[data-mat-icon]'))drawIcon(el,el.dataset.matIcon);}
-  return {styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode};
+  return {styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode,boundsFor,makeProject};
 });

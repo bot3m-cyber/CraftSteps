@@ -8,7 +8,40 @@ const BASE='assets/minecraft/';
 const pathOK=p=>/^assets\/minecraft\/(blockstates|models|textures)\/[a-z0-9_./-]+\.(json|png)$/.test(p)&&!p.includes('..');
 const LEGACY_DEMO_IDS=Object.freeze({leaves:'oak_leaves',hay:'hay_block',moss:'moss_block',stone_slab:'stone_brick_slab'});
 function stateId(b){const id=String(b?.blockId||b?.type||'minecraft:unknown').replace(/^minecraft:/,'').split('[')[0].replace(/[^a-z0-9_]/g,'');return LEGACY_DEMO_IDS[id]||id;}
-function properties(b){if(b?.properties&&typeof b.properties==='object')return b.properties;const p={},m=/\[([^\]]+)\]/.exec(b?.blockState||'');if(m)for(const piece of m[1].split(',')){const [k,v]=piece.split('=');if(k&&v)p[k]=v;}return p;}
+function properties(b){
+ const p=b?.properties&&typeof b.properties==='object'?{...b.properties}:{};
+ const m=/\[([^\]]+)\]/.exec(b?.blockState||'');
+ if(m)for(const piece of m[1].split(',')){const [k,v]=piece.split('=');if(k&&v&&!(k in p))p[k]=v;}
+ const type=stateId(b);
+ // The original demo blocks predate blockstate import. Give their missing states
+ // valid vanilla defaults; never overwrite states supplied by a .schem/.litematic.
+ if(/_door$/.test(type)&&!/_trapdoor$/.test(type)){
+   p.facing??='north';p.half??=b?.part==='upper'?'upper':'lower';
+   p.hinge??='left';p.open??='false';p.powered??='false';
+ } else if(/_slab$/.test(type)){p.type??='bottom';p.waterlogged??='false';}
+ else if(/_log$|_stem$|_hyphae$/.test(type)){p.axis??='y';}
+ else if(type==='lantern'||type==='soul_lantern'){p.hanging??='false';p.waterlogged??='false';}
+ return p;
+}
+function withContext(blocks){
+ if(!Array.isArray(blocks))return [];
+ const occupied=new Map(blocks.map(b=>[b.x+'|'+b.y+'|'+b.z,b]));
+ const dirs={north:[0,0,-1],east:[1,0,0],south:[0,0,1],west:[-1,0,0]};
+ return blocks.map(b=>{
+   const id=stateId(b),base=properties(b);
+   if(!(/_fence$|_pane$/.test(id)||id==='iron_bars'))return b;
+   if(Object.keys(dirs).some(dir=>dir in base))return b;
+   const derived={...base};
+   for(const [dir,[dx,dy,dz]] of Object.entries(dirs)){
+     const neighbor=occupied.get((b.x+dx)+'|'+(b.y+dy)+'|'+(b.z+dz));
+     // Infer only same-family connections. Other block attachments need real
+     // schematic states and should not be fabricated as correct vanilla behavior.
+     const other=neighbor?stateId(neighbor):'';
+     derived[dir]=other===id?'true':'false';
+   }
+   return {...b,properties:derived};
+ });
+}
 function uint32(v,p){return v.getUint32(p,true);}function uint16(v,p){return v.getUint16(p,true);}
 function sanitizeName(value,kind){const clean=String(value||'').replace(/^minecraft:/,'');if(!/^[a-z0-9_./-]+$/.test(clean)||clean.includes('..')||clean.startsWith('/'))throw Error('Ungültiger Asset-Pfad');return BASE+kind+'/'+clean;}
 async function inflateRaw(data,expected){
@@ -79,7 +112,29 @@ class AssetManager {
   const base=json.parent?await this.model(json.parent,new Set(seen)):null;
   return {textures:{...(base?.textures||{}),...(json.textures||{})},elements:json.elements??base?.elements??[],ambientocclusion:json.ambientocclusion??base?.ambientocclusion??true};
  }
- async image(path){if(!path||!this.zip?.has(path))return null;if(this.imageCache.has(path))return this.imageCache.get(path);const bytes=await this.zip.bytes(path);const bitmap=typeof createImageBitmap==='function'?await createImageBitmap(new Blob([bytes],{type:'image/png'})):await new Promise((resolve,reject)=>{const blobUrl=URL.createObjectURL(new Blob([bytes],{type:'image/png'})),img=new Image();img.onload=()=>{URL.revokeObjectURL(blobUrl);resolve(img);};img.onerror=()=>{URL.revokeObjectURL(blobUrl);reject(Error('PNG kann nicht gelesen werden'));};img.src=blobUrl;});this.imageCache.set(path,bitmap);return bitmap;}
+ async image(path){
+  if(!path||!this.zip?.has(path))return null;
+  if(this.imageCache.has(path))return this.imageCache.get(path);
+  const bytes=await this.zip.bytes(path),blob=new Blob([bytes],{type:'image/png'});
+  let bitmap=null;
+  if(typeof createImageBitmap==='function'){
+    try{bitmap=await createImageBitmap(blob);}catch(error){
+      // Mobile browsers sometimes reject createImageBitmap for particular PNGs:
+      // try the standard HTML image decoder before declaring the model missing.
+      if(typeof Image==='undefined')throw error;
+    }
+  }
+  if(!bitmap){
+    if(typeof Image==='undefined')throw Error('Dieser Browser kann PNG-Texturen nicht dekodieren.');
+    bitmap=await new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(blob),img=new Image();
+      img.onload=()=>{URL.revokeObjectURL(url);resolve(img);};
+      img.onerror=()=>{URL.revokeObjectURL(url);reject(Error('PNG kann nicht gelesen werden'));};
+      img.src=url;
+    });
+  }
+  this.imageCache.set(path,bitmap);return bitmap;
+ }
  async build(block){const type=stateId(block),props=properties(block);const spec=await this.json(BASE+'blockstates/'+type+'.json');if(!spec)return null;const seed=[type,block?.x||0,block?.y||0,block?.z||0].join('|'),selectors=chooseVariants(spec,props,seed);const output=[];
   for(const selected of selectors){const m=await this.model(selected.model);if(!m)continue;const elements=[];
    for(const e of m.elements.slice(0,64)){
@@ -107,5 +162,5 @@ async function withDB(mode,operation){const db=await openDB();try{return await n
 function savedFile(){if(!indexedDBAvailable())return null;return withDB('readonly',s=>s.get('vanilla'));}
 function persistFile(file){return withDB('readwrite',s=>s.put(file,'vanilla'));}
 function deleteFile(){if(!indexedDBAvailable())return Promise.resolve();return withDB('readwrite',s=>s.delete('vanilla'));}
-const manager=new AssetManager();return {ZipArchive,AssetManager,manager,chooseVariants,testWhen,resolveTexture,defaultUV,stateId,properties};
+const manager=new AssetManager();return {ZipArchive,AssetManager,manager,chooseVariants,testWhen,resolveTexture,defaultUV,stateId,properties,withContext};
 });
