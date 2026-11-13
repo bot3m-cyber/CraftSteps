@@ -294,6 +294,7 @@
       drawOutline(ctx,b,project,scale,yaw,pitch);
       ctx.restore();
     }
+    ctx.globalAlpha=1;
     if(!ready&&!opts.icon&&(opts.context==='guide'||opts.context==='hero')){
       // Do not disguise untextured placeholders as actual Minecraft blocks.
       const label='ORIGINALTEXTUREN NICHT GELADEN',sub='Minecraft-Java-Datei oben auswählen';
