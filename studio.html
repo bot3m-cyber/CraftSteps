@@ -7,17 +7,18 @@
   <meta name="description" content="CraftSteps Studio – lokale Minecraft-Schematics einlesen, prüfen und als Entwurf speichern." />
   <title>CraftSteps Studio – Bauwerke importieren</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-  <link rel="stylesheet" href="styles.css?v=0.5.0" />
-  <link rel="stylesheet" href="studio.css?v=0.5.0" />
+  <link rel="stylesheet" href="styles.css?v=0.6.0" />
+  <link rel="stylesheet" href="studio.css?v=0.6.0" />
 </head>
 <body>
   <div id="asset-manager" role="region" aria-label="Originale Minecraft-Java-Assets"></div>
   <div class="studio-shell">
-    <header class="studio-header"><a href="index.html" class="studio-back" aria-label="Zur Galerie zurück">← Galerie</a><strong class="studio-brand">CRAFT<span>STEPS</span><small> STUDIO</small></strong><span class="studio-pill">V0.5.0</span></header>
+    <header class="studio-header"><a href="index.html" class="studio-back" aria-label="Zur Galerie zurück">← Galerie</a><strong class="studio-brand">CRAFT<span>STEPS</span><small> STUDIO</small></strong><span class="studio-pill">V0.6.0</span></header>
     <main class="studio-main">
       <div class="studio-kicker">BAUWERKSVERWALTUNG · LOKALE ENTWÜRFE</div>
       <h1>Bauwerk importieren</h1>
       <p class="studio-lead">Lade einen Minecraft-Java-Bauplan hoch. CraftSteps liest die Blockdaten direkt in deinem Browser und erstellt daraus einen <strong>privaten, ungeprüften Entwurf</strong>.</p>
+      <a class="import-entry" href="image-studio.html" aria-label="Bildbasierte Anleitung erstellen">▧  Einfache Bildanleitung aus Screenshots erstellen <span>→</span></a>
       <section class="studio-panel" aria-label="Datei auswählen">
         <div class="studio-field"><label for="schem-file"><strong>1. Minecraft-Datei auswählen</strong><small>Unterstützt: Sponge .schem V2/V3, Litematica .litematic, Legacy .schematic · maximal 5 MiB Datei, 24.000 Positionen, 10.000 Blöcke</small></label><input type="file" accept=".schem,.litematic,.schematic" id="schem-file" /></div>
         <p class="studio-hint">Die Datei wird <strong>nicht auf einen Server hochgeladen</strong>. Litematica-Dateien und ältere Schematics werden automatisch erkannt; ältere Formate können ungenaue Blockstates enthalten.</p>
@@ -34,9 +35,9 @@
   <script src="core.js"></script>
   <script src="schem.js"></script>
   <script src="draft-store.js"></script>
-  <script src="vanilla-assets.js?v=0.5.0"></script>
-  <script src="block-visuals.js?v=0.5.0"></script>
-  <script src="assets-ui.js?v=0.5.0"></script>
-  <script src="studio.js?v=0.5.0"></script>
+  <script src="vanilla-assets.js?v=0.6.0"></script>
+  <script src="block-visuals.js?v=0.6.0"></script>
+  <script src="assets-ui.js?v=0.6.0"></script>
+  <script src="studio.js?v=0.6.0"></script>
 </body>
 </html>
