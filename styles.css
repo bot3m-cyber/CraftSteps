@@ -159,3 +159,11 @@ body[data-view="home"] .gallery{margin-bottom:20px}
 .immersive3d-materials span{display:flex;align-items:center;gap:6px;background:#272e34;border-color:#44515b}
 .immersive3d-materials canvas.mat-icon{width:25px!important;height:25px!important;flex:0 0 25px!important}
 .imm-scrubber input{accent-color:#ffc65a}
+
+.guide-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 24px}
+.guide-option{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--soft);color:var(--ink);text-decoration:none}
+.guide-option strong{font-size:17px}
+.guide-option span{font-size:13px;line-height:1.5;color:var(--muted)}
+.guide-option:hover{border-color:var(--green)}
+.guide-option:focus-visible{outline:3px solid var(--green);outline-offset:3px}
+@media(max-width:420px){.guide-options{grid-template-columns:1fr}}
