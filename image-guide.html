@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#161c1a">
+  <title>CraftSteps – Bildanleitung</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="image-guides.css">
+</head>
+<body>
+  <header class="img-topbar"><a href="image-studio.html" class="img-back">← Meine Anleitungen</a><strong class="img-logo">CRAFT<span>STEPS</span></strong><span class="img-chip">BILDGUIDE</span></header>
+  <main class="img-container img-guide-container">
+    <div id="guide-loading" class="img-panel" role="status">Lade deine Bildanleitung …</div>
+    <div id="guide-content" hidden>
+      <div class="img-overline">DEINE PRIVATE ANLEITUNG</div>
+      <div class="img-row-between img-guide-title"><div><h1 id="guide-title"></h1><p class="img-muted" id="guide-meta"></p></div><a href="image-studio.html" class="img-secondary">Bearbeiten / Neu</a></div>
+      <div class="img-guide-top"><strong id="guide-step">Schritt 1</strong><span id="guide-percent">0 %</span></div>
+      <div class="img-progress"><span id="guide-progress"></span></div>
+      <div class="img-viewport">
+        <canvas id="image-canvas" aria-label="Minecraft-Schrittbild mit automatisch markierten Unterschieden" role="img"></canvas>
+        <div class="img-canvas-tag">Bildbasierte Anleitung · kein echtes 3D</div>
+      </div>
+      <div id="diff-status" class="img-diff-status" role="status" aria-live="polite"></div>
+      <div class="img-guide-controls">
+        <button id="previous" type="button" class="img-secondary">← Zurück</button>
+        <button id="next" type="button" class="img-primary">Weiter →</button>
+      </div>
+      <section class="img-panel">
+        <div class="img-row-between"><h2>Automatische Markierung</h2><label class="img-toggle"><input id="show-markings" type="checkbox" checked> Rot anzeigen</label></div>
+        <label class="img-field">Empfindlichkeit <input type="range" id="sensitivity" min="0" max="100" value="50"></label>
+        <p class="img-muted">CraftSteps vergleicht zwei Bilder aus möglichst identischer Perspektive und umrandet veränderte Bildbereiche. <strong>Das ist noch keine KI</strong> und keine pixelgenaue Erkennung einzelner Minecraft-Blöcke. Bei Kamerabewegung oder abweichenden Bildern wird die Markierung aus Sicherheitsgründen ausgelassen.</p>
+      </section>
+      <section class="img-panel">
+        <h2>3D-Ansicht</h2>
+        <p class="img-muted">Bilder enthalten keine verlässlichen 3D-Blockkoordinaten. Für eine drehbare Minecraft-3D-Ansicht mit echten Blockstates kannst du zusätzlich einen Bauplan als <strong>.schem, .litematic oder .schematic</strong> importieren. Vorhandene 3D-Bauwerke lassen sich in CraftSteps separat öffnen.</p>
+        <div class="img-inline-actions"><a href="studio.html" class="img-secondary">3D-Bauplan importieren</a><a href="index.html" class="img-secondary">3D-Bauguide öffnen</a></div>
+      </section>
+    </div>
+  </main>
+  <script src="image-guides.js?v=0.6.0"></script>
+  <script src="image-guide.js?v=0.6.0"></script>
+</body>
+</html>
