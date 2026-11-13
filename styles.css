@@ -185,3 +185,18 @@ body[data-view="onboarding"] #asset-manager{display:none!important}
 .ob-actions{display:grid;gap:12px;justify-items:center}
 .ob-actions .primary{width:100%;max-width:420px;background:var(--brand);color:#fff}
 @media(prefers-reduced-motion:reduce){.interest-chip{transition:none}}
+
+/* Consistent material colors across lists and step summaries. */
+.material-row,.material-tile,.coordinate-group{
+ border-left:4px solid var(--material-color,#8999ac);
+ background:color-mix(in srgb,var(--material-color,#8999ac) 18%,var(--panel));
+ color:var(--ink);
+}
+.material-row.checked{background:color-mix(in srgb,#63a557 20%,var(--panel))}
+.material-row.checked .mat-name{text-decoration:line-through}
+.material-tile canvas.mat-icon,.material-row canvas.mat-icon{background:transparent;border:0}
+.coordinate-card summary{cursor:pointer;font-weight:700;padding:8px 0}
+.coordinate-group{padding:12px;border-radius:8px;min-width:0}
+.coordinate-group>div{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.coordinate-group small{display:block;padding:5px 8px;border-radius:5px;background:var(--panel);color:var(--ink)}
+.immersive3d-materials .material-tile{background:color-mix(in srgb,var(--material-color) 25%,#151a1e);color:#fff;border-left:4px solid var(--material-color)}
