@@ -65,7 +65,14 @@ async function inflateRaw(data,expected){
   for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.length;}return result;
 }
 class ZipArchive {
- constructor(file,entries){this.file=file;this.entries=entries;}
+ constructor(file,entries){
+  this.file=file;this.entries=entries;
+  this.inventory={models:0,textures:0};
+  for(const path of entries.keys()){
+    if(path.startsWith(BASE+'models/'))this.inventory.models++;
+    else if(path.startsWith(BASE+'textures/'))this.inventory.textures++;
+  }
+}
  static async open(file){
   if(!file||typeof file.size!=='number'||file.size<100||file.size>MAX_ARCHIVE)throw Error('Ungültige Datei oder größer als 140 MiB');
   const tailStart=Math.max(0,file.size-(65535+22));const tail=new DataView(await file.slice(tailStart).arrayBuffer());let end=-1;
@@ -110,10 +117,10 @@ class AssetManager {
  subscribe(fn){this.callbacks.add(fn);return ()=>this.callbacks.delete(fn);}
  notify(){for(const fn of this.callbacks){try{fn(this.info());}catch{}}}
  info(){
-  const entries=this.zip?[...this.zip.entries.keys()]:[];
+  const counts=this.zip?.inventory||{models:0,textures:0};
   return {ready:!!this.zip,source:this.source,kind:this.kind,version:this.version,persisted:this.persisted,
-    archiveModels:entries.filter(p=>p.startsWith(BASE+'models/')).length,
-    archiveTextures:entries.filter(p=>p.startsWith(BASE+'textures/')).length,
+    archiveModels:counts.models,
+    archiveTextures:counts.textures,
     models:[...this.dataCache.values()].filter(models=>models?.length).length,
     images:[...this.imageCache.values()].filter(i=>i&&i.width).length,
     missing:this.missingTypes.size,missingTypes:[...this.missingTypes].slice(0,12),
@@ -122,7 +129,7 @@ class AssetManager {
  reportError(message){
    if(this.errors.length<30&&!this.errors.includes(message))this.errors.push(message);
  }
- async load(file,{persist=true}={}){
+ async load(file,{persist=true,restored=false}={}){
   this.status='loading';this.notify();
   try{
    const zip=await ZipArchive.open(file);
@@ -132,7 +139,7 @@ class AssetManager {
    this.source=file.name||'Minecraft Java';
    this.kind=classifyArchive(file);
    this.version=detectVersion(file.name,versionMeta);
-   this.persisted=!persist;
+   this.persisted=!!restored;
    this.dataCache.clear();this.jsonCache.clear();this.imageCache.clear();
    this.missingTypes.clear();this.errors=[];
    this.status='ready';this.notify();
@@ -147,7 +154,7 @@ class AssetManager {
  async restore(){
    if(this.restoring)return this.restoring;
    this.restoring=(async()=>{try{
-     const file=await savedFile();if(file)await this.load(file,{persist:false});
+     const file=await savedFile();if(file)await this.load(file,{persist:false,restored:true});
    }catch(e){this.reportError('Gespeicherte Minecraft-Datei konnte nicht wiederhergestellt werden: '+e.message);this.notify();}})();
    return this.restoring;
  }
