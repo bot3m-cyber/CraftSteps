@@ -134,3 +134,28 @@ body.imm-open .craft-app-nav{display:none}
 #imm-assets-feedback:empty{display:none}
 #imm-assets-feedback.vanilla-error{color:#ffb9ad}
 @media(max-width:460px){.imm-asset-panel{left:8px;top:8px;max-width:min(212px,calc(100% - 16px));padding:8px 10px;gap:5px}.imm-asset-upload{min-height:37px;font-size:11px;padding:7px 10px}#imm-assets-help,#imm-assets-feedback{font-size:9px}}
+
+/* Gallery and build controls */
+body[data-view]:not([data-view="settings"]) #asset-manager:not(.vanilla-missing){display:none}
+.imm-asset-panel[hidden],[data-auto-textures][hidden]{display:none}
+.topbar{border-bottom:1px solid var(--line)}
+.brand{letter-spacing:.04em}
+.brand span{color:#a65f0e}
+body.dark .brand span{color:#f3c55a}
+body[data-view="home"] .content{display:flex;flex-direction:column}
+body[data-view="home"] .search-area{order:-2;margin:0 0 10px}
+body[data-view="home"] .category-rail{order:-1;margin:0 0 20px}
+body[data-view="home"] .import-entry{order:1;margin:8px 0}
+body[data-view="home"] .footer-note{order:2}
+body[data-view="home"] .gallery{margin-bottom:20px}
+.category-pill.active{box-shadow:inset 0 -2px 0 #a86b18}
+.build-card .art-button{overflow:hidden;border:1px solid var(--line)}
+.card-label{font-weight:800}
+.immersive3d,.immersive3d-head,.immersive3d-footer{background:#151a1e}
+.immersive3d-head,.immersive3d-footer{border-color:#394149}
+.immersive3d-actions button{background:#272e34;border-color:#44515b}
+.immersive3d-step-nav button:last-child{background:#ffc65a;border-color:#ffc65a;color:#222018}
+.immersive3d-step-nav button:disabled{opacity:.45}
+.immersive3d-materials span{display:flex;align-items:center;gap:6px;background:#272e34;border-color:#44515b}
+.immersive3d-materials canvas.mat-icon{width:25px!important;height:25px!important;flex:0 0 25px!important}
+.imm-scrubber input{accent-color:#ffc65a}

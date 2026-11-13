@@ -251,7 +251,7 @@
     const limit=opts.icon?1:(opts.limit|| (w<350?1400:4000));
     const chosenRaw=blocks.length>limit?blocks.filter((b,i)=>i%Math.ceil(blocks.length/limit)===0):blocks;
     const chosen=globalThis.CraftStepsAssets?.withContext?.(chosenRaw)||chosenRaw;
-    const stepPositions=new Set(highlighted.map(b=>b.x+'|'+b.y+'|'+b.z));
+    const stepPositions=new Map(highlighted.map((b,index)=>[b.x+'|'+b.y+'|'+b.z,index]));
     const reveal=mathClamp(Number.isFinite(opts.stepReveal)?opts.stepReveal:1,0,1);
     if(!opts.transparent){const sx=build.width||1,sz=build.depth||1,grid=[];for(let a of [0,sx])for(let b of [0,sz])grid.push(project(a,-.02,b));
       ctx.beginPath();let p=project(0,-.03,0);ctx.moveTo(p.x,p.y);for(let [a,b] of [[sx,0],[sx,sz],[0,sz],[0,0]]){p=project(a,-.03,b);ctx.lineTo(p.x,p.y);}ctx.fillStyle='rgba(110,159,93,.45)';ctx.fill();ctx.strokeStyle='rgba(70,110,68,.45)';ctx.lineWidth=.8;ctx.stroke();
@@ -263,10 +263,12 @@
     const opaqueDirs={east:[1,0,0],west:[-1,0,0],top:[0,1,0],bottom:[0,-1,0],north:[0,0,-1],south:[0,0,1]};
     let missing=0;
     for(const b of chosen){
-      const isNew=!opts.icon&&stepPositions.has(b.x+'|'+b.y+'|'+b.z);
-      const appearing=isNew&&reveal<1;
-      const rendered=appearing?{...b,y:b.y+(1-reveal)*.42}:b;
-      const opacity=appearing?Math.max(.06,Math.min(1,reveal*1.35)):1;
+      const index=stepPositions.get(b.x+'|'+b.y+'|'+b.z);
+      const delay=(index||0)/Math.max(1,highlighted.length-1)*.48;
+      const placement=opts.icon||index===undefined?1:mathClamp((reveal-delay)/.52,0,1);
+      const appearing=placement<1;
+      const rendered=appearing?{...b,y:b.y+(1-placement)*.65}:b;
+      const opacity=appearing?Math.max(.06,placement):1;
       const model=ready?manager.get(b):null;
       if(model?.length){
         const textured=assetFacesFor(rendered,model,project,depth,yaw,pitch,chosenFull);

@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 if(typeof document==='undefined')return;
-const api=window.CraftStepsAssets?.manager,mount=document.getElementById('asset-manager');
+const assets=window.CraftStepsAssets,api=assets?.manager,mount=document.getElementById('asset-manager');
 if(!api||!mount)return;
 mount.innerHTML=[
  '<div class="vanilla-control-main">',
@@ -14,6 +14,7 @@ mount.innerHTML=[
  '<div class="vanilla-actions">',
   '<label class="vanilla-upload" for="vanilla-file">Minecraft-Datei auswählen<input id="vanilla-file" type="file" accept=".jar,.zip,application/java-archive,application/zip" aria-label="Eigene Minecraft Java Client JAR oder vollständiges Vanilla Asset ZIP auswählen"></label>',
   '<button class="vanilla-remove" type="button" id="vanilla-clear" hidden>Entfernen</button>',
+  '<button class="vanilla-remove" type="button" data-auto-textures hidden>Erneut laden</button>',
  '</div>',
  '<div class="vanilla-status" id="vanilla-file-text" role="status" aria-live="polite"></div>',
  '<details class="vanilla-help"><summary>Wo finde ich meine Minecraft-Datei?</summary>',
@@ -26,7 +27,7 @@ mount.innerHTML=[
 const pick=document.getElementById('vanilla-file');
 const clear=document.getElementById('vanilla-clear');
 const statusNode=document.getElementById('vanilla-file-text');
-let notice='';
+let notice='',download=null,downloadFailed=false;
 function status(message,error=false){
  notice=message;statusNode.textContent=message;
  statusNode.classList.toggle('vanilla-error',error);
@@ -36,17 +37,20 @@ function status(message,error=false){
 function render(){
  const info=api.info();
  const kind=info.kind==='java-client'?'Java-Client':'vollständiges Asset-ZIP';
- const mode=info.status==='loading'?'loading':info.ready?'ready':'missing';
+ const mode=info.ready?'ready':download||info.status==='loading'?'loading':'missing';
  mount.className='vanilla-control vanilla-'+mode;
  document.getElementById('vanilla-pill').textContent=mode==='loading'?'Wird geladen …':info.ready?'Originaltexturen aktiv':'Nicht geladen';
  const source=document.getElementById('vanilla-source');
- if(mode==='loading')source.textContent='Prüfe Minecraft-Blockstates, Modelle und Texturdateien. Die Datei wird nicht hochgeladen.';
+ if(mode==='loading')source.textContent=download?'Lädt Minecraft Java 1.21.1 direkt von Mojang …':'Prüft die ausgewählte Minecraft-Datei …';
  else if(info.ready)source.textContent=(info.version?'Version '+info.version+' · ':'Version unbekannt · ')+kind+' · '+info.source+'. '+(info.persisted?'Lokal für spätere Besuche gespeichert.':'Nur für diese Sitzung geladen.');
- else source.textContent='Keine Originaltexturen geladen. Wähle deine eigene Minecraft-Java-Client-JAR, damit CraftSteps die tatsächlichen Blocktexturen anzeigen kann.';
+ else source.textContent='Minecraft-Originaltexturen sind gerade nicht verfügbar.';
  const metrics=document.getElementById('vanilla-metrics');
  metrics.hidden=!info.ready;
  metrics.textContent=info.ready?info.archiveModels+' Modelle und '+info.archiveTextures+' Texturdateien gefunden · '+info.images+' PNGs für die aktuelle Ansicht geladen'+(info.missing?' · '+info.missing+' Blocktypen ohne Modell':''):'';
- pick.disabled=mode==='loading';clear.hidden=!info.ready;clear.disabled=mode==='loading';
+ pick.disabled=info.status==='loading';
+ const fullscreenInput=document.getElementById('immersive-vanilla-file');
+ if(fullscreenInput)fullscreenInput.disabled=pick.disabled;
+ for(const retry of document.querySelectorAll?.('[data-auto-textures]')||[])retry.hidden=!downloadFailed||!!download;clear.hidden=!info.ready;clear.disabled=mode==='loading';
  if(!notice&&info.ready&&!info.persisted)statusNode.textContent='Tipp: Die Speicherung konnte eventuell nicht abgeschlossen werden. Details prüfen.';
  const issues=[...(info.diagnostics||[]),...(info.missingTypes||[]).map(id=>'Kein passendes Modell für: minecraft:'+id)].slice(0,15);
  const details=document.getElementById('vanilla-issues');
@@ -58,16 +62,19 @@ function render(){
  // Refresh these labels in-place without resetting the camera or 3D animation.
  const indicator=document.getElementById('imm-assets-indicator');
  if(indicator){
+   const panel=indicator.closest?.('.imm-asset-panel');
+   if(panel)panel.hidden=info.ready;
    indicator.textContent=info.ready?'Originaltexturen aktiv'+(info.version?' · '+info.version:''):mode==='loading'?'Originaltexturen werden geladen …':'Originaltexturen fehlen';
    indicator.className=info.ready?'imm-asset-ready':'imm-asset-missing';
    const action=document.getElementById('imm-assets-button-label');
    if(action)action.textContent=info.ready?'Minecraft-Datei wechseln':'Originaltexturen laden';
    const help=document.getElementById('imm-assets-help');
-   if(help)help.textContent=info.ready?'Originaldatei lokal geladen; keine Dateien hochgeladen.':'Auf dem Handy eigene Minecraft-Java-Datei vom PC auswählen (.jar).';
+   if(help)help.textContent=info.ready?'Originaldatei lokal geladen; keine Dateien hochgeladen.':'Bei Bedarf eine eigene Minecraft-Java-Datei auswählen (.jar).';
  }
 }
 async function loadUserFile(file){
- if(!file)return;
+ if(!file||api.info().status==='loading')return;
+ download?.abort();download=null;downloadFailed=false;
  status('Lese die Originaldateien …');render();
  try{
   const info=await api.load(file);
@@ -95,13 +102,39 @@ clear.addEventListener('click',async()=>{
  catch(err){status('Datei nicht vollständig entfernt: '+err.message,true);}
  render();
 });
+window.addEventListener?.('craftsteps:view',render);
 api.subscribe(()=>{
  render();
  window.dispatchEvent(new CustomEvent('craftsteps:assets'));
 });
+async function loadOfficial(){
+ if(download||api.info().ready||api.info().status==='loading'||!assets.fetchDefaultClient)return;
+ const controller=new AbortController();
+ download=controller;
+ const timeout=setTimeout(()=>controller.abort(),45000);
+ status('');
+ render();
+ try{
+  const file=await assets.fetchDefaultClient(controller.signal);
+  if(download!==controller)return;
+  await api.load(file);
+  downloadFailed=false;
+ }catch{
+  if(download!==controller)return;
+  downloadFailed=true;
+  status('Automatisches Laden fehlgeschlagen. Erneut versuchen oder eigene Minecraft-Datei auswählen.',true);
+ }finally{
+  clearTimeout(timeout);
+  if(download===controller){download=null;render();}
+ }
+}
+document.addEventListener('click',event=>{
+ if(event.target.closest?.('[data-auto-textures]'))void loadOfficial();
+});
 render();
 void api.restore().then(()=>{
  if(api.info().ready)status('Originaltexturen aus deinem lokalen Browser-Speicher wiederhergestellt.');
+ else void loadOfficial();
  render();
 }).catch(err=>{status('Lokale Minecraft-Datei konnte nicht wiederhergestellt werden: '+err.message,true);render();});
 })();

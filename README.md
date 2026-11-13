@@ -5,9 +5,13 @@ CraftSteps ist eine unabhängige, frei zugängliche Schritt-für-Schritt-Bauanle
 **Live:** https://bot3m-cyber.github.io/CraftSteps/  
 **Importstudio:** https://bot3m-cyber.github.io/CraftSteps/studio.html
 
+## V0.9 – automatische Originaltexturen und 3D-Wiedergabe
+
+CraftSteps verwendet zuerst eine lokal gespeicherte Minecraft-Datei. Liegt keine vor, lädt der Browser den offiziellen Java-Client 1.21.1 (26,8 MB) direkt von Mojang, prüft seine SHA-256-Prüfsumme und speichert die Datei lokal. In den Optionen kann eine eigene Version gewählt oder der Download wiederholt werden. Im 3D-Modus erscheinen neue Blöcke nacheinander. Die Wiedergabe kann automatisch alle Schritte durchlaufen.
+
 ## V0.5 – originale Assets aus der eigenen Minecraft-Java-Datei
 
-CraftSteps verwendet für die 3D-Ansicht **ausschließlich die originalen Vanilla-Textur-PNGs, Blockmodelle und Blockstates aus einer Datei, die du selbst lokal auswählst**. Ohne diese Datei erscheinen nur klar gekennzeichnete, einfarbig-neutrale Platzhalter – keine nachgemalten oder angeblich originalen Texturen. Der Webserver und das öffentliche GitHub-Repository enthalten **keine Minecraft-Spieltexturen, keine extrahierten Mojang-Dateien und keine eingebettete Client-JAR**.
+CraftSteps verwendet für die 3D-Ansicht **die originalen Vanilla-Textur-PNGs, Blockmodelle und Blockstates aus dem automatischen Download oder deiner eigenen lokalen Datei**. Ohne diese Datei erscheinen nur klar gekennzeichnete, einfarbig-neutrale Platzhalter – keine nachgemalten oder angeblich originalen Texturen. Der Webserver und das öffentliche GitHub-Repository enthalten **keine Minecraft-Spieltexturen, keine extrahierten Mojang-Dateien und keine eingebettete Client-JAR**.
 
 ### Originale Minecraft-Java-Assets aktivieren
 

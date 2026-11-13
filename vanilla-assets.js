@@ -112,6 +112,17 @@ function defaultUV(face,from,to){switch(face){
  case 'west':return [from[2],16-to[1],to[2],16-from[1]];
  case 'east':return [16-to[2],16-to[1],16-from[2],16-from[1]];
  default:return [0,0,16,16];}}
+const OFFICIAL_CLIENT='https://piston-data.mojang.com/v1/objects/30c73b1c5da787909b2f73340419fdf13b9def88/client.jar';
+async function fetchDefaultClient(signal){
+ const response=await fetch(OFFICIAL_CLIENT,{signal,credentials:'omit',redirect:'error'});
+ if(!response.ok)throw Error('Mojang-Download fehlgeschlagen');
+ const data=await response.arrayBuffer();
+ if(data.byteLength!==26836906)throw Error('Mojang-Download unvollständig');
+ const digest=await crypto.subtle.digest('SHA-256',data);
+ const hex=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
+ if(hex!=='499f6897d1837516680f3114072d8106e11c9adcd933fe5cf051b551089b0c99')throw Error('Ungültige Prüfsumme');
+ return new File([data],'minecraft-1.21.1.jar',{type:'application/java-archive'});
+}
 class AssetManager {
  constructor(){this.zip=null;this.status='none';this.source='';this.errors=[];this.jsonCache=new Map();this.dataCache=new Map();this.imageCache=new Map();this.callbacks=new Set();this.pending=new Set();this.processing=null;this.restoring=null;this.version=null;this.kind=null;this.persisted=false;this.missingTypes=new Set();}
  subscribe(fn){this.callbacks.add(fn);return ()=>this.callbacks.delete(fn);}
@@ -230,5 +241,5 @@ async function withDB(mode,operation){
 function savedFile(){if(!indexedDBAvailable())return null;return withDB('readonly',s=>s.get('vanilla'));}
 function persistFile(file){return withDB('readwrite',s=>s.put(file,'vanilla'));}
 function deleteFile(){if(!indexedDBAvailable())return Promise.resolve();return withDB('readwrite',s=>s.delete('vanilla'));}
-const manager=new AssetManager();return {ZipArchive,AssetManager,manager,chooseVariants,testWhen,resolveTexture,defaultUV,stateId,properties,withContext,detectVersion,classifyArchive};
+const manager=new AssetManager();return {ZipArchive,AssetManager,manager,fetchDefaultClient,chooseVariants,testWhen,resolveTexture,defaultUV,stateId,properties,withContext,detectVersion,classifyArchive};
 });
