@@ -30,6 +30,8 @@ let notice='';
 function status(message,error=false){
  notice=message;statusNode.textContent=message;
  statusNode.classList.toggle('vanilla-error',error);
+ const feedback=document.getElementById('imm-assets-feedback');
+ if(feedback){feedback.textContent=message;feedback.classList.toggle('vanilla-error',error);}
 }
 function render(){
  const info=api.info();
@@ -52,16 +54,41 @@ function render(){
  document.getElementById('vanilla-issues-title').textContent=issues.length?'Diagnose: '+issues.length+' Hinweise':'Diagnose';
  const list=document.getElementById('vanilla-issues-list');list.replaceChildren();
  for(const msg of issues){const li=document.createElement('li');li.textContent=msg;list.append(li);}
+ // The immersive viewer is already mounted when a file finishes loading.
+ // Refresh these labels in-place without resetting the camera or 3D animation.
+ const indicator=document.getElementById('imm-assets-indicator');
+ if(indicator){
+   indicator.textContent=info.ready?'Originaltexturen aktiv'+(info.version?' · '+info.version:''):mode==='loading'?'Originaltexturen werden geladen …':'Originaltexturen fehlen';
+   indicator.className=info.ready?'imm-asset-ready':'imm-asset-missing';
+   const action=document.getElementById('imm-assets-button-label');
+   if(action)action.textContent=info.ready?'Minecraft-Datei wechseln':'Originaltexturen laden';
+   const help=document.getElementById('imm-assets-help');
+   if(help)help.textContent=info.ready?'Originaldatei lokal geladen; keine Dateien hochgeladen.':'Auf dem Handy eigene Minecraft-Java-Datei vom PC auswählen (.jar).';
+ }
 }
-pick.addEventListener('change',async()=>{
- const file=pick.files?.[0];if(!file)return;
+async function loadUserFile(file){
+ if(!file)return;
  status('Lese die Originaldateien …');render();
  try{
   const info=await api.load(file);
   status('Originaltexturen aktiviert'+(info.version?' (Minecraft '+info.version+')':'')+'. '+(info.persisted?'Für spätere Besuche lokal gespeichert.':'Lokal geladen; Speichern war nicht möglich, siehe Diagnose.'),!info.persisted);
  }catch(err){
   status('Minecraft-Datei nicht geladen: '+(err?.message||'Unbekannter Fehler')+'. Die bisherige Texturquelle bleibt unverändert.',true);
- }finally{pick.value='';render();}
+ }finally{render();}
+}
+pick.addEventListener('change',async()=>{
+ const file=pick.files?.[0];
+ await loadUserFile(file);
+ pick.value='';
+});
+// The fullscreen control uses its own native file picker. Event delegation
+// survives the viewer being rebuilt on step changes and works on Android.
+document.addEventListener('change',async event=>{
+ const input=event.target;
+ if(input?.id!=='immersive-vanilla-file')return;
+ const file=input.files?.[0];
+ await loadUserFile(file);
+ input.value='';
 });
 clear.addEventListener('click',async()=>{
  try{await api.clear();status('Minecraft-Datei und lokale Texturkopie entfernt.');}
