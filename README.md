@@ -111,3 +111,12 @@ Die eingebauten Demoblöcke `leaves`, `hay`, `moss` und `stone_slab` werden jetz
 - **Originaltexturen**: Minecraft-Java-Texturen werden weiterhin ausschließlich aus der eigenen, lokal ausgewählten Java-Client-Datei geladen. Es werden keine Mojang-Assets verteilt.
 
 CraftSteps ist eigenständig gestaltet und verwendet keinen Quellcode, keine Inhalte und keine Grafiken von WBuilds. Die öffentlichen WBuilds-Funktionsbeschreibungen dienen lediglich als Inspiration für ähnliche Abläufe.
+
+
+## V0.7 – animierte Schrittfolge und App-Navigation
+
+Die App hat jetzt eine **eigene** mobile Navigation (Entdecken, Erstellen, Favoriten und Optionen), damit die Bauwerksgalerie, die Materialansicht und die Erstellung besser zusammenarbeiten. Die Anleitung unterstützt jetzt den **animierten Wechsel zum nächsten Bauschritt**: Neue Blockgeometrie blendet ein und bewegt sich auf ihre reale Position; die Kamera wechselt weich zum neuen Baufokus. Die exakten roten Platzierungskonturen bleiben auf den gespeicherten Weltkoordinaten.
+
+Im separaten großen 3D-Modus sind Schritt-Zeitleiste, Animationswiedergabe, Animation ein/aus, Zoom, Gesamtansicht, Fokussierung, Unterseitenansicht und Materialübersicht verfügbar. Die Animation respektiert die Browseroption „Bewegungen reduzieren“. Die Navigation und Animationen wurden vollständig eigenständig für CraftSteps programmiert.
+
+**Wichtige Grenzen:** WBuilds ist ein eigenständiges Produkt; CraftSteps übernimmt weder dessen Marke, Grafiken, Screenshots noch fremden Programmcode. Die Umsetzung ist keine exakte Kopie aller WBuilds-Inhalte oder Abonnements. Die 3D-Ansicht ist weiterhin eine Canvas-Projektion, keine vollständige Minecraft-Engine. Exakte Minecraft-Texturen sind nur mit einer vom Nutzer lokal ausgewählten Java-Client-Datei möglich; ohne sie erscheinen neutrale Platzhalter. Eine tatsächlich KI-gestützte, pixelgenaue Blockerkennung aus Screenshots ist nicht enthalten.
