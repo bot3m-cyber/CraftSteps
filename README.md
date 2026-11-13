@@ -134,3 +134,15 @@ Der Minecraft-Asset-Importer wird im **gleichen CraftSteps-Projekt** verwendet. 
 - **Geräte**: Android-Nutzer können dieselbe eigene Java-Client-Datei zuvor vom PC auf das Handy kopieren. Die Datei wird nicht auf GitHub hochgeladen und nicht mit anderen Geräten synchronisiert.
 
 **Stand der Umsetzung:** Der Import ermöglicht Original-Textur-PNGs und Modelle für unterstützte Minecraft-Blöcke, aber die Canvas-Rendering-Engine ist weiterhin nicht für sämtliche Vanilla-Blockstates oder Biome- und Entity-Effekte pixelgenau. Die Oberfläche darf deshalb nicht behaupten, „alle Blöcke vollständig wie in Minecraft“ darzustellen. Mojang/Microsoft-Assets werden nicht im öffentlichen Repository mitgeliefert.
+
+
+## V0.8.1 – Originaltexturen im 3D-Vollbildmodus laden
+
+Im Vollbildmodus der 3D-Bauanleitung gibt es jetzt direkt im Sichtfeld die **eigene Minecraft-Java-Datei auswählen**-Funktion. Der native Android-/Desktop-Dateiauswahldialog wird über ein echtes Datei-Eingabefeld geöffnet; deshalb muss der 3D-Modus nicht mehr geschlossen werden. Das Uploadfeld ist mit dem vorhandenen Browser-lokalen Vanilla-Asset-Importer verbunden.
+
+- Der Lade- und Fehlerstatus sowie die erkannte Minecraft-Version werden nach dem Import live im 3D-Modus angezeigt, ohne den Kamerawinkel oder die Schrittposition zurückzusetzen.
+- Die redundante, große Canvas-Warnung im Vollbild wurde entfernt. Stattdessen erscheint ein kleiner, bedienbarer Textur-Status.
+- Die Datei verlässt den Browser nicht. Originaltexturen sind nur verfügbar, wenn der Nutzer seine eigene **vollständige Minecraft-Java-Client-JAR** bereitstellt (auf Android bei Bedarf vorher vom eigenen PC übertragen).
+- Ohne eine solche Datei werden ausdrücklich nur graue Platzhalter angezeigt. Es werden **keine Mojang/Microsoft-Texturen mit dieser Webseite verteilt** und keine angeblichen Originaltexturen nachgebaut.
+- Dieser Fix betrifft die Bedienung des Imports, nicht die vollständige Pixelgenauigkeit aller speziellen Blockstates und Modelle.
+
