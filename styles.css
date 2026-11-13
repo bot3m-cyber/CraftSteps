@@ -200,3 +200,13 @@ body[data-view="onboarding"] #asset-manager{display:none!important}
 .coordinate-group>div{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .coordinate-group small{display:block;padding:5px 8px;border-radius:5px;background:var(--panel);color:var(--ink)}
 .immersive3d-materials .material-tile{background:color-mix(in srgb,var(--material-color) 25%,#151a1e);color:#fff;border-left:4px solid var(--material-color)}
+
+.gallery-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:10px 0 20px}
+.gallery-filters label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.gallery-filters .select{max-width:100%;min-height:42px}
+.gallery-filters button{min-height:42px}
+.build-dimensions{padding:12px 16px;margin:14px 0;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.build-dimensions summary{cursor:pointer;font-weight:750}
+.build-dimensions p{line-height:1.5;color:var(--muted)}
+.material-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+@media(max-width:480px){.gallery-filters label{flex:1 1 140px}.gallery-filters button{width:100%}}
