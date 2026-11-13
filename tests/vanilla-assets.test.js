@@ -16,7 +16,7 @@ function zip(files){
 }
 const stem='assets/minecraft/';
 const json=x=>JSON.stringify(x);
-function assetFile(){return zip({
+function assetFile(extra={}){return zip({
  [stem+'blockstates/stone.json']:json({variants:{'':{model:'minecraft:block/stone'}}}),
  [stem+'models/block/stone.json']:json({parent:'minecraft:block/cube_all',textures:{all:'minecraft:block/stone'}}),
  [stem+'models/block/cube_all.json']:json({textures:{},elements:[{from:[0,0,0],to:[16,16,16],faces:Object.fromEntries(['north','south','east','west','up','down'].map(f=>[f,{texture:'#all'}]))}]}),
@@ -24,6 +24,7 @@ function assetFile(){return zip({
  [stem+'blockstates/oak_stairs.json']:json({variants:{'facing=north,half=bottom':{model:'minecraft:block/oak_stairs'},'facing=south,half=bottom':{model:'minecraft:block/oak_stairs',y:180}}}),
  [stem+'models/block/oak_stairs.json']:json({textures:{all:'minecraft:block/oak_planks'},elements:[{from:[0,0,0],to:[16,8,16],faces:{up:{texture:'#all'},north:{texture:'#all'}}}]}),
  [stem+'textures/block/oak_planks.png']:Buffer.from('PNG from test'),
+ ...extra
  });}
 test('ZIP index validates a complete Java archive and inflates deflate-raw entries',async()=>{const archive=await ZipArchive.open(assetFile());assert.ok(archive.has(stem+'textures/block/stone.png'));const json=await archive.json(stem+'blockstates/stone.json');assert.equal(json.variants[''].model,'minecraft:block/stone');});
 test('ZIP import rejects incomplete or oversized / malformed archives',async()=>{await assert.rejects(ZipArchive.open(zip({'not-minecraft/readme.txt':'x'})),/Vanilla-Java-Assets/);await assert.rejects(ZipArchive.open(new File(['invalid'],'x.jar')),/ZIP-Archiv|Ungültige Datei/);});
@@ -62,4 +63,52 @@ test('missing demo fence connections are derived from adjacent block coordinates
  assert.equal(connected[0].properties.north,'false');
  const explicit=withContext([{type:'oak_fence',x:2,y:1,z:0,properties:{east:'false',west:'true'}}]);
  assert.equal(explicit[0].properties.east,'false');
+});
+
+test('Minecraft version is read from actual client metadata and never fabricated',async()=>{
+ const {detectVersion,classifyArchive}=require('../vanilla-assets.js');
+ assert.equal(detectVersion('1.21.1.jar'),'1.21.1');
+ assert.equal(detectVersion('minecraft-26.2.jar'),'26.2');
+ assert.equal(detectVersion('custom-client.jar'),null);
+ assert.equal(detectVersion('client.jar',{id:'26.1-pre1'}),'26.1-pre1');
+ assert.equal(classifyArchive({name:'1.21.1.jar'}),'java-client');
+ assert.equal(classifyArchive({name:'vanilla.zip'}),'complete-assets-zip');
+ const mgr=new AssetManager();
+ const report=await mgr.load(assetFile({'version.json':json({id:'26.1'})}),{persist:false});
+ assert.equal(report.version,'26.1');
+ assert.equal(report.kind,'java-client');
+ assert.equal(report.persisted,false);
+ assert.ok(report.archiveModels>=2);
+ assert.ok(report.archiveTextures>=2);
+ assert.equal(report.images,0);
+});
+
+test('when version metadata is unavailable the validated filename provides a cautious fallback',async()=>{
+ const mgr=new AssetManager();
+ const info=await mgr.load(assetFile(),{persist:false});
+ assert.equal(info.version,'1.21.1');
+ assert.equal(info.persisted,false);
+ assert.equal(info.status,'ready');
+});
+
+test('unavailable original models are reported with exact block IDs',async()=>{
+ const mgr=new AssetManager();
+ await mgr.load(assetFile(),{persist:false});
+ await mgr.ensure([{type:'diamond_block',x:0,y:0,z:0}]);
+ const info=mgr.info();
+ assert.equal(info.missing,1);
+ assert.deepEqual(info.missingTypes,['diamond_block']);
+ assert.equal(mgr.get({type:'diamond_block',x:0,y:0,z:0}).length,0);
+});
+
+test('failed local persistence does not hide loaded textures or claim they were saved',async()=>{
+ const mgr=new AssetManager();
+ const original=globalThis.indexedDB;
+ try{
+  globalThis.indexedDB=undefined;
+  const info=await mgr.load(assetFile());
+  assert.equal(info.ready,true);
+  assert.equal(info.persisted,false);
+  assert.ok(info.diagnostics.some(msg=>msg.includes('nicht')||msg.includes('weg')));
+ }finally{globalThis.indexedDB=original;}
 });
