@@ -91,7 +91,7 @@ class ZipArchive {
     if(pathOK(path)&&!(flags&1)&&(method===0||method===8)&&compressed<=MAX_ENTRY&&raw<=MAX_ENTRY&&local<file.size){entries.set(path,{local,compressed,raw,method,crc:uint32(data,i+16)});}
     i+=46+nameLen+extraLen+commentLen;
   }
-  if(!entries.size||!entries.has(BASE+'textures/block/stone.png')||!entries.has(BASE+'blockstates/stone.json')||!entries.has(BASE+'models/block/stone.json'))throw Error('Keine vollständigen Vanilla-Java-Assets gefunden. Bitte eine Minecraft-Java-Client-JAR mit assets/minecraft auswählen.');
+  if(!entries.size||!entries.has(BASE+'textures/block/stone.png')||!entries.has(BASE+'blockstates/stone.json')||!entries.has(BASE+'models/block/stone.json'))throw Error('Keine vollständigen Vanilla-Java-Assets gefunden. Du benötigst eine Minecraft-Java-Client-JAR mit Blockstates, Modellen und Texturen; reine Texture-Only-ZIPs reichen nicht.');
   return new ZipArchive(file,entries);
  }
  has(path){return this.entries.has(path);}
