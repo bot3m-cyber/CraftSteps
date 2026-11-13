@@ -2,9 +2,11 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {builds,MATERIALS,countMaterials,generateSteps,stepState,stacks,validateBuild}=require('../core.js');
 
-test('Drei eigenständige Builds sind vorhanden',()=>{
-  assert.equal(builds.length,3);
-  assert.equal(new Set(builds.map(b=>b.id)).size,3);
+test('Zehn eigenständige Builds in mehreren Kategorien sind vorhanden',()=>{
+  assert.equal(builds.length,10);
+  assert.equal(new Set(builds.map(b=>b.id)).size,10);
+  const cats=new Set(builds.map(b=>b.category));
+  for(const c of ['Häuser','Burgen','Farmen','Portale','Dekoration','Statuen','Survival-Basen','Innenräume'])assert.ok(cats.has(c),'Kategorie fehlt: '+c);
 });
 for(const build of builds){
   test(build.name+': alle Koordinaten eindeutig und rekonstruierbar',()=>{

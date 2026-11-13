@@ -5,6 +5,16 @@ CraftSteps ist eine unabhängige, frei zugängliche Schritt-für-Schritt-Bauanle
 **Live:** https://bot3m-cyber.github.io/CraftSteps/  
 **Importstudio:** https://bot3m-cyber.github.io/CraftSteps/studio.html
 
+## V0.10 – Onboarding, mehr Kategorien, Offline-Modus
+
+- **Onboarding mit Interessen:** Beim ersten Start wählst du deine Lieblingsthemen. Passende Bauwerke erscheinen auf der Startseite zuerst („Für dich“). Änderbar unter Optionen → Interessen. Keine Anmeldung, keine Bezahlfunktionen, keine Werbung.
+- **Vollständige Kategorien:** Häuser, Burgen, Farmen, Portale, Dekoration, Statuen, Redstone, Survival-Basen, Innenräume, Natur, Mittelalter. Es werden nur Kategorien angezeigt, die mindestens ein Bauwerk enthalten. Englische Kategorienamen sind enthalten; Studio und Bildstudio kennen dieselben Kategorien.
+- **10 eigene Demo-Bauwerke** (vorher 3): Mini-Burgtor, Obsidian-Portalrahmen, Heuballen-Scheune, Goldene Wächterstatue, Dorfbrunnen, Kleines Baumhaus und Bibliotheks-Nische kamen hinzu. Alle sind aus eigenen Blockkoordinaten erzeugt und werden von den Tests geprüft.
+- **Offline-Nutzung:** `manifest.json` und `sw.js` machen CraftSteps als App installierbar und offline nutzbar. Online wird immer die neueste Version geladen, der Cache dient nur als Fallback.
+- **Orange Akzentfarbe** über die CSS-Variable `--brand` (in `styles.css` zentral änderbar).
+
+CraftSteps bildet Aufbau und Ablauf einer modernen Bauanleitungs-App nach, verwendet aber keine Inhalte, Grafiken, Texte oder Marken von WBuilds.
+
 ## V0.9 – automatische Originaltexturen und 3D-Wiedergabe
 
 CraftSteps verwendet zuerst eine lokal gespeicherte Minecraft-Datei. Liegt keine vor, lädt der Browser den offiziellen Java-Client 1.21.1 (26,8 MB) direkt von Mojang, prüft seine SHA-256-Prüfsumme und speichert die Datei lokal. In den Optionen kann eine eigene Version gewählt oder der Download wiederholt werden. Im 3D-Modus erscheinen neue Blöcke nacheinander. Die Wiedergabe kann automatisch alle Schritte durchlaufen.

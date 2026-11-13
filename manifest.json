@@ -1,0 +1,15 @@
+{
+  "name": "CraftSteps – Minecraft Bauanleitungen",
+  "short_name": "CraftSteps",
+  "description": "Schritt-für-Schritt-Bauanleitungen für Minecraft mit Materialliste und 3D-Ansicht – auch offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#fe6900",
+  "lang": "de",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

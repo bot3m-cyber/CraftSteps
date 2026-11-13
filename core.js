@@ -20,7 +20,15 @@
     oak_fence: { de:'Eichenzaun', en:'Oak Fence', hex:'#b58b50', stack:64, icon:'╫' },
     lantern: { de:'Laterne', en:'Lantern', hex:'#ecae43', stack:64, icon:'✦' },
     stone_slab: { de:'Steinziegelstufe', en:'Stone Brick Slab', hex:'#8d9392', stack:64, icon:'▱' },
-    hay: { de:'Heuballen', en:'Hay Bale', hex:'#d3b448', stack:64, icon:'▥' }
+    hay: { de:'Heuballen', en:'Hay Bale', hex:'#d3b448', stack:64, icon:'▥' },
+    oak_log: { de:'Eichenstamm', en:'Oak Log', hex:'#7a5a35', stack:64, icon:'▥' },
+    obsidian: { de:'Obsidian', en:'Obsidian', hex:'#1b1230', stack:64, icon:'▦' },
+    crying_obsidian: { de:'Weinender Obsidian', en:'Crying Obsidian', hex:'#2c0f56', stack:64, icon:'▦' },
+    gold_block: { de:'Goldblock', en:'Block of Gold', hex:'#f6d33e', stack:64, icon:'▦' },
+    iron_block: { de:'Eisenblock', en:'Block of Iron', hex:'#d8d8d8', stack:64, icon:'▦' },
+    bookshelf: { de:'Bücherregal', en:'Bookshelf', hex:'#9a7443', stack:64, icon:'▤' },
+    crafting_table: { de:'Werkbank', en:'Crafting Table', hex:'#9b6a37', stack:64, icon:'▤' },
+    stone: { de:'Stein', en:'Stone', hex:'#7d7d7d', stack:64, icon:'▦' }
   };
   const block = (x,y,z,type,phase,part,atomicId) => ({x,y,z,type,phase,part:part||null,atomicId:atomicId||null});
   function makeBuild(id,name,category,difficulty,description,width,depth,writer,style,tags) {
@@ -121,7 +129,90 @@
         for(let x=0;x<5;x++){add(x,8,0,'stone_slab',8);add(x,8,4,'stone_slab',8);}
         for(let z=1;z<4;z++){add(0,8,z,'stone_slab',8);add(4,8,z,'stone_slab',8);}
         for(const [x,z] of [[0,0],[4,4]])add(x,9,z,'lantern',9);
-      },'tower',['turm','burg','mittelalter'])
+      },'tower',['turm','burg','mittelalter']),
+    makeBuild('burgtor','Mini-Burgtor','Burgen','Mittel',
+      'Ein wehrhaftes Burgtor mit zwei Ecktürmen, Zinnen und einem hohen Torbogen. Originales CraftSteps-Demobauwerk.',11,3,add=>{
+        for(let z=0;z<3;z++)for(let x=0;x<11;x++)add(x,0,z,'cobblestone',0);
+        for(let y=1;y<=6;y++)for(let z=0;z<3;z++)for(let x=0;x<11;x++){
+          const tower=x<=2||x>=8;
+          const gate=x>=4&&x<=6&&y<=4;
+          if(gate||(!tower&&z!==1))continue;
+          add(x,y,z,'stone_bricks',y<=3?1:y<=5?2:3);
+        }
+        for(let x=0;x<11;x++)for(let z=0;z<3;z++){
+          const tower=x<=2||x>=8;
+          if(tower&&(x+z)%2===0)add(x,7,z,'stone_slab',4);
+          if(!tower&&z===1)add(x,7,z,x%2===0?'stone_bricks':'stone_slab',4);
+        }
+        add(3,8,1,'lantern',5);add(7,8,1,'lantern',5);
+      },'castle',['burg','tor','mittelalter']),
+    makeBuild('portalrahmen','Obsidian-Portalrahmen','Portale','Leicht',
+      'Ein klassischer Portalrahmen auf einer Steinplattform mit leuchtenden Akzenten. Originales CraftSteps-Demobauwerk.',6,5,add=>{
+        for(let z=0;z<5;z++)for(let x=0;x<6;x++)add(x,0,z,(x===0||x===5||z===0||z===4)?'stone_bricks':'cobblestone',0);
+        for(let y=1;y<=5;y++)for(let x=1;x<=4;x++){
+          const edge=x===1||x===4||y===1||y===5;
+          if(!edge)continue;
+          const corner=(x===1||x===4)&&(y===1||y===5);
+          add(x,y,2,corner?'crying_obsidian':'obsidian',y);
+        }
+        add(0,1,0,'lantern',6);add(5,1,4,'lantern',6);
+      },'portal',['portal','obsidian','nether']),
+    makeBuild('scheune','Heuballen-Scheune','Farmen','Mittel',
+      'Eine geräumige Farm-Scheune mit Holzrahmen, Heulager und Satteldach. Originales CraftSteps-Demobauwerk.',7,9,add=>{
+        for(let z=0;z<9;z++)for(let x=0;x<7;x++)add(x,0,z,'dirt',0);
+        for(let y=1;y<=4;y++)for(let z=0;z<9;z++)for(let x=0;x<7;x++){
+          if(!(x===0||x===6||z===0||z===8))continue;
+          if(z===8&&x===3&&(y===1||y===2)){add(x,y,z,'oak_door',2,y===1?'lower':'upper','barndoor');continue;}
+          const post=(x===0||x===6)&&(z===0||z===8||z===4);
+          const window=y===3&&(((x===0||x===6)&&(z===2||z===6))||(x===3&&z===0));
+          add(x,y,z,post?'oak_log':window?'glass':'oak_planks',y<=2?1:y===3?2:3);
+        }
+        for(let z=1;z<=3;z++)for(let x=1;x<=2;x++)add(x,1,z,'hay',4);
+        for(let z=0;z<9;z++){add(0,5,z,'spruce_planks',5);add(6,5,z,'spruce_planks',5);add(1,6,z,'spruce_planks',6);add(5,6,z,'spruce_planks',6);for(let x=2;x<=4;x++)add(x,7,z,'spruce_planks',7);}
+      },'barn',['scheune','bauernhof','farm']),
+    makeBuild('wachterstatue','Goldene Wächterstatue','Statuen','Mittel',
+      'Eine blockige Wächterstatue auf einem Steinsockel mit goldenem Körper. Originales CraftSteps-Demobauwerk.',5,5,add=>{
+        for(let z=0;z<5;z++)for(let x=0;x<5;x++)add(x,0,z,'stone_bricks',0);
+        for(let z=1;z<4;z++)for(let x=1;x<4;x++)add(x,1,z,'stone',1);
+        for(const x of [1,3])for(let y=2;y<=4;y++)add(x,y,2,'gold_block',2+y-2);
+        for(let x=1;x<=3;x++)for(let y=5;y<=7;y++)add(x,y,2,'gold_block',5);
+        add(0,6,2,'gold_block',6);add(4,6,2,'gold_block',6);add(0,7,2,'gold_block',6);add(4,7,2,'gold_block',6);
+        add(2,8,2,'iron_block',7);add(2,9,2,'iron_block',7);
+      },'statue',['statue','wächter','gold']),
+    makeBuild('brunnen','Dorfbrunnen','Dekoration','Leicht',
+      'Ein kleiner Brunnen mit Wasserbecken, Zaunpfosten und Laternen. Originales CraftSteps-Demobauwerk.',5,5,add=>{
+        for(let z=0;z<5;z++)for(let x=0;x<5;x++)add(x,0,z,'cobblestone',0);
+        for(let z=0;z<5;z++)for(let x=0;x<5;x++){
+          const ring=x===0||x===4||z===0||z===4;
+          add(x,1,z,ring?'stone_bricks':'water',1);
+        }
+        for(const [x,z] of [[0,0],[4,0],[0,4],[4,4]])for(let y=2;y<=3;y++)add(x,y,z,'oak_fence',2);
+        for(let x=0;x<5;x++){add(x,4,0,'spruce_planks',3);add(x,4,4,'spruce_planks',3);}
+        for(let z=1;z<4;z++){add(0,4,z,'spruce_planks',3);add(4,4,z,'spruce_planks',3);}
+        add(2,2,0,'lantern',4);add(2,2,4,'lantern',4);
+      },'fountain',['brunnen','dorf','deko']),
+    makeBuild('baumhaus','Kleines Baumhaus','Survival-Basen','Mittel',
+      'Ein Survival-Unterschlupf auf einem dicken Stamm mit Plattform, Geländer und Blätterdach. Originales CraftSteps-Demobauwerk.',7,7,add=>{
+        for(let z=2;z<=4;z++)for(let x=2;x<=4;x++)add(x,0,z,'dirt',0);
+        for(let y=1;y<=9;y++){add(3,y,3,'oak_log',y);}
+        for(let z=0;z<7;z++)for(let x=0;x<7;x++)if(!(x===3&&z===3))add(x,6,z,'oak_planks',6);
+        for(let i=0;i<7;i++){add(i,7,0,'oak_fence',7);add(i,7,6,'oak_fence',7);}
+        for(let i=1;i<6;i++){add(0,7,i,'oak_fence',7);add(6,7,i,'oak_fence',7);}
+        add(1,7,1,'lantern',8);add(5,7,5,'lantern',8);
+        for(let y=9;y<=10;y++)for(let z=1;z<=5;z++)for(let x=1;x<=5;x++){
+          if((x===1||x===5)&&(z===1||z===5))continue;
+          if(x===3&&z===3&&y===9)continue;
+          add(x,y,z,'leaves',y===9?9:10);
+        }
+      },'treehouse',['baumhaus','survival','wald']),
+    makeBuild('leseecke','Bibliotheks-Nische','Innenräume','Leicht',
+      'Eine gemütliche Leseecke mit Bücherregalen, Werkbank und Laternenlicht. Originales CraftSteps-Demobauwerk.',5,5,add=>{
+        for(let z=0;z<5;z++)for(let x=0;x<5;x++)add(x,0,z,'spruce_planks',0);
+        for(let y=1;y<=3;y++)for(let x=0;x<5;x++){add(x,y,0,y===3?'oak_planks':'bookshelf',y);}
+        for(let y=1;y<=3;y++)for(let z=1;z<5;z++){add(0,y,z,y===3?'oak_planks':'bookshelf',y);}
+        add(4,1,1,'crafting_table',4);
+        add(1,1,1,'lantern',5);add(4,2,1,'lantern',5);
+      },'library',['bibliothek','innenraum','regale'])
   ];
   for(const build of builds)validateBuild(build);
   return {MATERIALS,builds,generateSteps,countMaterials,stepState,stacks,validateBuild};
