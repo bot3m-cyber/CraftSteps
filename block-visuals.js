@@ -113,7 +113,18 @@
     const maxY=build.height||Math.max(1,...blocks.map(b=>b.y+1));
     const spanX=build.width||Math.max(1,...blocks.map(b=>b.x+1));
     const spanZ=build.depth||Math.max(1,...blocks.map(b=>b.z+1));
-    const focus=boundsFor(opts.focus);
+    let focus=boundsFor(opts.focus);
+    const nextFocus=focus;
+    const previous=boundsFor(opts.fromFocus);
+    // Interpolate the visible step bounds, so the camera glides rather than jumping.
+    if(focus&&previous){
+      const t=mathClamp(Number.isFinite(opts.focusBlend)?opts.focusBlend:1,0,1);
+      if(t<1){
+        focus={};
+        for(const key of ['minX','minY','minZ','maxX','maxY','maxZ'])
+          focus[key]=previous[key]+(nextFocus[key]-previous[key])*t;
+      }
+    }
     const pad=focus ? 0.75 : 0;
     const frame=focus?{
       minX:focus.minX-pad,minY:focus.minY-pad,minZ:focus.minZ-pad,
@@ -234,12 +245,14 @@
     if(!opts.transparent){
       const grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'#c8e1e9');grad.addColorStop(.64,'#e5edf0');grad.addColorStop(.641,'#b9d39b');grad.addColorStop(1,'#82a974');ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
     }else{ctx.clearRect(0,0,w,h);}
-    const {project,depth,scale,yaw,pitch}=makeProject(w,h,build,{yaw:opts.yaw,pitch:opts.pitch,zoom:opts.icon?1.45:opts.zoom,focus:opts.followStep?opts.highlight:null});
+    const {project,depth,scale,yaw,pitch}=makeProject(w,h,build,{yaw:opts.yaw,pitch:opts.pitch,zoom:opts.icon?1.45:opts.zoom,focus:opts.followStep?opts.highlight:null,fromFocus:opts.followStep?opts.fromHighlight:null,focusBlend:opts.cameraBlend});
     const blocks=opts.blocks||build.blocks, highlighted=opts.highlight||[];
     // Deliberate rendering budget keeps a malformed import from freezing mobile browsers.
     const limit=opts.icon?1:(opts.limit|| (w<350?1400:4000));
     const chosenRaw=blocks.length>limit?blocks.filter((b,i)=>i%Math.ceil(blocks.length/limit)===0):blocks;
     const chosen=globalThis.CraftStepsAssets?.withContext?.(chosenRaw)||chosenRaw;
+    const stepPositions=new Set(highlighted.map(b=>b.x+'|'+b.y+'|'+b.z));
+    const reveal=mathClamp(Number.isFinite(opts.stepReveal)?opts.stepReveal:1,0,1);
     if(!opts.transparent){const sx=build.width||1,sz=build.depth||1,grid=[];for(let a of [0,sx])for(let b of [0,sz])grid.push(project(a,-.02,b));
       ctx.beginPath();let p=project(0,-.03,0);ctx.moveTo(p.x,p.y);for(let [a,b] of [[sx,0],[sx,sz],[0,sz],[0,0]]){p=project(a,-.03,b);ctx.lineTo(p.x,p.y);}ctx.fillStyle='rgba(110,159,93,.45)';ctx.fill();ctx.strokeStyle='rgba(70,110,68,.45)';ctx.lineWidth=.8;ctx.stroke();
       if(sx<=32&&sz<=32) {ctx.strokeStyle='rgba(58,93,62,.15)';ctx.lineWidth=.5;for(let x=0;x<=sx;x++){const a=project(x,0,0),b=project(x,0,sz);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}for(let z=0;z<=sz;z++){const a=project(0,0,z),b=project(sx,0,z);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}}
@@ -250,23 +263,37 @@
     const opaqueDirs={east:[1,0,0],west:[-1,0,0],top:[0,1,0],bottom:[0,-1,0],north:[0,0,-1],south:[0,0,1]};
     let missing=0;
     for(const b of chosen){
+      const isNew=!opts.icon&&stepPositions.has(b.x+'|'+b.y+'|'+b.z);
+      const appearing=isNew&&reveal<1;
+      const rendered=appearing?{...b,y:b.y+(1-reveal)*.42}:b;
+      const opacity=appearing?Math.max(.06,Math.min(1,reveal*1.35)):1;
       const model=ready?manager.get(b):null;
-      if(model?.length){faces.push(...assetFacesFor(b,model,project,depth,yaw,pitch,chosenFull));continue;}
+      if(model?.length){
+        const textured=assetFacesFor(rendered,model,project,depth,yaw,pitch,chosenFull);
+        if(appearing)for(const face of textured)face.alpha=opacity;
+        faces.push(...textured);continue;
+      }
       missing++;
       // No fabricated textures. Neutral geometry only when a vanilla model is missing/loading.
       for(const part of modelFor(b))for(const f of FACES){
         if(!faceVisible(f,yaw,pitch))continue;
         const d=opaqueDirs[f.id],opaque=isFullCube(b);
         if(opaque&&chosenFull.has(`${b.x+d[0]}|${b.y+d[1]}|${b.z+d[2]}`))continue;
-        const points=f.pts(part).map(v=>[v[0]+b.x,v[1]+b.y,v[2]+b.z]);
+        const points=f.pts(part).map(v=>[v[0]+rendered.x,v[1]+rendered.y,v[2]+rendered.z]);
         const avg=points.reduce((sum,v)=>sum.map((n,i)=>n+v[i]/4),[0,0,0]);
-        faces.push({poly:points.map(p=>project(...p)),depth:depth(...avg),texture:null,type:rawName(b),id:f.id,alpha:1});
+        faces.push({poly:points.map(p=>project(...p)),depth:depth(...avg),texture:null,type:rawName(b),id:f.id,alpha:opacity});
       }
     }
     faces.sort((a,b)=>a.depth-b.depth);
     for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id);}ctx.globalAlpha=1;
     // Highlight is generated from the precise integer voxel coordinates, never AI image analysis.
-    for(const b of highlighted.slice(0,64))drawOutline(ctx,b,project,scale,yaw,pitch);
+    for(const b of highlighted.slice(0,64)){
+      ctx.save();
+      // Exact red block-position outlines stay fixed even during placement animation.
+      ctx.globalAlpha=.82+.18*Math.sin(reveal*Math.PI/2);
+      drawOutline(ctx,b,project,scale,yaw,pitch);
+      ctx.restore();
+    }
     if(!ready&&!opts.icon&&(opts.context==='guide'||opts.context==='hero')){
       // Do not disguise untextured placeholders as actual Minecraft blocks.
       const label='ORIGINALTEXTUREN NICHT GELADEN',sub='Minecraft-Java-Datei oben auswählen';
