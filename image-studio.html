@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#161c1a">
+  <meta name="description" content="CraftSteps Bildstudio: Minecraft-Bauanleitungen aus eigenen Schrittbildern erstellen.">
+  <title>CraftSteps – Bildanleitung erstellen</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="image-guides.css">
+</head>
+<body>
+  <header class="img-topbar"><a href="index.html" class="img-back">← CraftSteps</a><strong class="img-logo">CRAFT<span>STEPS</span></strong><span class="img-chip">BILDSTUDIO</span></header>
+  <main class="img-container">
+    <div class="img-overline">BUILD · LEARN · CREATE</div>
+    <h1>Neue Bauanleitung</h1>
+    <p class="img-lead">Lade einfach deine Minecraft-Schrittbilder hoch. CraftSteps versucht, die Unterschiede zwischen zwei Bildern automatisch rot zu markieren.</p>
+    <div class="img-note"><strong>Gut zu wissen:</strong> Die automatische Bildanalyse funktioniert am besten, wenn du alle Schritte aus <strong>derselben Kameraposition</strong> aufnimmst. Sie ist noch keine KI und erkennt keine sicheren Blockkoordinaten. Deine Bilder bleiben privat in diesem Browser.</div>
+    <section class="img-panel">
+      <h2>1. Bauwerk beschreiben</h2>
+      <label class="img-field">Name des Bauwerks <input id="build-title" maxlength="90" placeholder="Zum Beispiel: Moderne Starterhütte" required></label>
+      <label class="img-field">Kategorie <select id="build-category"><option>Häuser</option><option>Mittelalter</option><option>Farmen</option><option>Dekoration</option><option>Redstone</option><option>Sonstiges</option></select></label>
+    </section>
+    <section class="img-panel">
+      <h2>2. Bilder auswählen</h2>
+      <label class="img-upload">
+        <span class="img-upload-icon">▧</span>
+        <strong>Schrittbilder hinzufügen</strong>
+        <small>PNG, JPG oder WebP · maximal 48 Bilder · bis zu 7 MB pro Bild</small>
+        <input type="file" id="step-files" accept="image/png,image/jpeg,image/webp" multiple>
+      </label>
+      <label class="img-field">Optional: Foto vor dem ersten Bauschritt
+        <small>Ein Ausgangsbild ermöglicht die automatische Markierung schon bei Schritt 1.</small>
+        <input type="file" id="baseline-file" accept="image/png,image/jpeg,image/webp">
+      </label>
+      <div class="img-row-between"><strong id="step-count">Noch keine Schrittbilder</strong><small>Reihenfolge mit ↑ und ↓ ändern</small></div>
+      <div id="step-list" class="img-file-list" aria-live="polite"></div>
+    </section>
+    <div class="img-actions"><button class="img-primary" id="save-guide" type="button">Private Bildanleitung erstellen</button><span id="upload-status" role="status" aria-live="polite"></span></div>
+    <section class="img-panel">
+      <div class="img-row-between"><h2>Meine Bildanleitungen</h2><span id="saved-count" class="img-chip">0</span></div>
+      <div id="saved-guides" class="img-saved"></div>
+    </section>
+    <p class="img-disclaimer">Die hier gespeicherten Bilder sind nur auf diesem Gerät und in diesem Browser abrufbar. Keine Cloud-Synchronisierung oder öffentliche Veröffentlichung. Lade nur eigene oder erlaubte Bilder hoch.</p>
+  </main>
+  <script src="image-guides.js?v=0.6.0"></script>
+  <script src="image-studio.js?v=0.6.0"></script>
+</body>
+</html>

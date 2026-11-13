@@ -38,3 +38,29 @@ canvas.mat-icon{width:39px!important;height:39px!important;flex:0 0 39px!importa
 .view-switches button[aria-pressed="true"]{background:color-mix(in srgb,var(--green) 20%,var(--soft));border-color:var(--green)}
 .view-switches button:hover{border-color:var(--muted)}
 @media(max-width:460px){.view-switches{justify-content:stretch}.view-switches button{flex:1 1 calc(50% - 8px);font-size:11px;padding:8px 7px}}
+
+
+/* CraftSteps v0.6: image-first entry and independent immersive 3D view. */
+.img-first-entry{background:linear-gradient(120deg,#e7f5e7,#f5f8ed);border-color:#a3c8a7;color:#204e31}
+.img-first-entry:hover{border-color:#4f9762}
+.immersive-launch{display:flex;width:100%;justify-content:center;align-items:center;gap:10px;padding:14px;border:1px solid #9bc2a5;border-radius:13px;background:#e5f4e8;color:#23563a;font-weight:850;font-size:14px;margin:0 0 12px;cursor:pointer}
+.immersive-launch:hover{background:#d2ebd7}
+body.imm-open{overflow:hidden}
+.immersive3d{position:fixed;z-index:200;inset:0;background:#141c18;color:#f6f7f5;display:flex;flex-direction:column;overflow:hidden}
+.immersive3d-head{display:flex;flex:0 0 auto;justify-content:space-between;align-items:center;gap:16px;padding:10px 16px;background:#1c2a22;border-bottom:1px solid #35483d;min-height:69px}
+.immersive3d-head strong{display:block;font-size:17px}
+.immersive3d-head small{display:block;color:#b0c3b7;font-size:12px;margin-top:5px}
+.imm-close{background:#35473b;border:1px solid #4b6653;border-radius:9px;color:#fff;padding:9px 12px;white-space:nowrap;font-weight:750}
+.immersive3d-scene{position:relative;flex:1 1 auto;min-height:120px;overflow:hidden;background:#b3cfca}
+.immersive3d-scene .voxel{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+.immersive3d-scene .voxel:active{cursor:grabbing}
+.imm-hint{position:absolute;bottom:11px;left:12px;background:#192a22db;color:#fff;padding:7px 10px;border-radius:7px;pointer-events:none;font-size:11px}
+.immersive3d-footer{flex:0 0 auto;padding:10px max(12px,calc((100vw - 880px)/2));background:#1c2a22;border-top:1px solid #35483d;display:grid;gap:9px}
+.immersive3d-actions,.immersive3d-step-nav{display:flex;justify-content:center;align-items:center;gap:7px}
+.immersive3d-actions button,.immersive3d-step-nav button{background:#314638;color:white;border:1px solid #4a6b53;border-radius:8px;padding:10px 12px;font-weight:720;font-size:12px;min-height:39px}
+.immersive3d-actions button:hover,.immersive3d-step-nav button:hover{background:#436349}
+.immersive3d-step-nav button{flex:1;max-width:220px;background:#eaf2e9;color:#1a3323;border-color:#bdcebc}
+.immersive3d-step-nav>span{font-size:12px;white-space:nowrap;font-weight:900;color:#fff;padding:0 4px}
+.immersive3d-materials{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:thin}
+.immersive3d-materials span{flex:0 0 auto;font-size:11px;color:#dfebde;background:#26382c;border:1px solid #3b5641;border-radius:7px;padding:6px 8px}
+@media(max-width:640px){.immersive3d-head{padding:8px 10px;min-height:55px}.immersive3d-head strong{font-size:14px}.immersive3d-head small{font-size:10px}.immersive3d-footer{padding:8px 9px}.immersive3d-actions{gap:4px;flex-wrap:wrap}.immersive3d-actions button{flex:1 1 auto;padding:8px 7px;font-size:11px}.immersive3d-step-nav button{padding:10px 6px}.immersive3d-step-nav>span{font-size:11px}.imm-hint{font-size:10px}}

@@ -95,3 +95,19 @@ Die eingebauten Demoblöcke `leaves`, `hay`, `moss` und `stone_slab` werden jetz
 - Der lokale Textur-Loader versucht bei `createImageBitmap`-Problemen auch die Browser-Bilddekodierung.
 
 **Einschränkung:** Die originale Minecraft-Optik benötigt weiterhin die vom Nutzer lokal ausgewählte Minecraft-Java-Datei. Keine Mojang-Texturen sind in CraftSteps oder im Repository enthalten. Nicht jeder Vanilla-Blockzustand ist bereits vollständig gerendert. Die Canvas-Vorschau ist noch kein vollständiger Minecraft-Renderer; komplexe Blockmodelle, besondere Tint-Farben, Biome und Block-Entities können abweichen.
+
+
+## V0.6 – Bildstudio und eigenständiger 3D-Bauguide (Beta)
+
+**Bildstudio:** \`https://bot3m-cyber.github.io/CraftSteps/image-studio.html\`
+**Bildguide:** wird nach dem Speichern als lokale Anleitung im Browser geöffnet.
+
+- **Bildbasierter Upload**: 1–48 eigene Schrittbilder als PNG/JPEG/WebP auswählen, Reihenfolge ändern, optional ein vorheriges Ausgangsbild angeben.
+- **Automatische Rotmarkierung**: CraftSteps vergleicht das aktuelle Schrittbild mit dem vorherigen aus derselben Perspektive und umrandet größere geänderte Bildbereiche. Die Erkennung ist eine **einfache lokale Bilddifferenz**, **keine KI** und keine pixelgenaue Erkennung einzelner Minecraft-Blöcke. Bei großflächigen Veränderungen wird die Markierung bewusst verworfen statt falsch angezeigt.
+- **Bildguide**: Nummerierte Schritte, Vor/Zurück, Fortschritt lokal gespeichert, Umrandung ein/aus und Sensitivitätsregler.
+- **Eigenständiger 3D-Modus**: Bei existierenden Bauwerken mit tatsächlichen Blockkoordinaten lässt sich in der normalen Bauanleitung ein bildschirmfüllender, drehbarer 3D-Modus öffnen – mit Schritt-Fokus, Unteransicht, Zoom und Materialübersicht.
+- **Privatsphäre**: Bilddateien werden **nur lokal in IndexedDB** des jeweiligen Geräts gespeichert und nicht auf einen Server hochgeladen. Beim Löschen von Browserdaten können sie verloren gehen.
+- **Grenze zwischen Bild und 3D**: Screenshots erlauben allein keine verlässliche Rekonstruktion der Blockkoordinaten. 3D ist deshalb nur für Bauwerke mit Bauplandatei verfügbar. Vollautomatische KI-Blockerkennung und serverseitige Admin-Veröffentlichung sind separate, noch nicht implementierte Entwicklungsaufgaben.
+- **Originaltexturen**: Minecraft-Java-Texturen werden weiterhin ausschließlich aus der eigenen, lokal ausgewählten Java-Client-Datei geladen. Es werden keine Mojang-Assets verteilt.
+
+CraftSteps ist eigenständig gestaltet und verwendet keinen Quellcode, keine Inhalte und keine Grafiken von WBuilds. Die öffentlichen WBuilds-Funktionsbeschreibungen dienen lediglich als Inspiration für ähnliche Abläufe.
