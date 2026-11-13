@@ -91,3 +91,31 @@ body.imm-open .craft-app-nav{display:none}
 .guide-image{scroll-margin-top:85px}
 @media(max-width:480px){.motion-toolbar button{flex:1 1 auto;padding:9px 8px;font-size:11px}.immersive3d-footer{gap:6px}.imm-scrubber span{font-size:10px}.craft-app-nav{border-radius:13px 13px 0 0}}
 @media(prefers-reduced-motion:reduce){.craft-app-nav,.build-card .art-button,.guide-image{transition:none!important}}
+
+
+/* v0.8 – imported official Minecraft assets: clear status and diagnostics. */
+.vanilla-control{align-items:center}
+.vanilla-control-main{flex:1 1 330px;min-width:0}
+.vanilla-control-head{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.vanilla-control-head strong{font-weight:850;font-size:14px}
+.vanilla-eyebrow{font-size:9px;font-weight:900;letter-spacing:1px;color:#668672}
+.vanilla-pill{font-size:10px;line-height:1.1;background:#e2eae1;border:1px solid #cedfce;padding:5px 9px;border-radius:50px;font-weight:800;color:#4c6653}
+.vanilla-ready .vanilla-pill{background:#d5ebd9;border-color:#8dbb9c;color:#225735}
+.vanilla-loading .vanilla-pill{background:#f6eabd;border-color:#e1c87c;color:#735c17}
+.vanilla-description{color:#51695a;overflow-wrap:anywhere}
+.vanilla-metrics{font-size:11px;font-weight:700;color:#347747;line-height:1.4;overflow-wrap:anywhere}
+.vanilla-metrics[hidden]{display:none}
+.vanilla-help,.vanilla-issues{flex:1 1 100%;font-size:12px;color:#4d6656;border-top:1px solid #d7e1d6;padding-top:8px}
+.vanilla-help summary,.vanilla-issues summary{cursor:pointer;font-weight:800;list-style-position:inside}
+.vanilla-help p{font-size:11px;line-height:1.5;margin:8px 0}
+.vanilla-help code{font:11px ui-monospace,SFMono-Regular,Consolas,monospace;background:#e7efe8;color:#314539;border-radius:4px;padding:2px 4px;overflow-wrap:anywhere}
+.vanilla-issues ul{max-height:150px;overflow-y:auto;margin:9px 0 0;padding-left:22px}
+.vanilla-issues li{margin:5px 0;overflow-wrap:anywhere}
+.vanilla-issues[hidden]{display:none}
+.vanilla-status.vanilla-error{color:#ad2933;font-weight:740}
+.vanilla-control.vanilla-loading{border-color:#d9c585}
+.dark .vanilla-eyebrow,.dark .vanilla-description,.dark .vanilla-help,.dark .vanilla-issues{color:#bed3c4}
+.dark .vanilla-pill{color:#183b25}
+.dark .vanilla-help code{background:#304737;color:#e2f1e6}
+.dark .vanilla-status.vanilla-error{color:#ffadb2}
+@media(max-width:650px){.vanilla-control{gap:9px}.vanilla-control-main{flex-basis:100%}.vanilla-control-head{gap:6px}.vanilla-actions{flex-basis:100%}.vanilla-upload{min-height:44px}.vanilla-remove{width:100%}}

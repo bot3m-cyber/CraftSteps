@@ -5,7 +5,7 @@
 'use strict';
 const MAX_ARCHIVE=140*1024*1024, MAX_ENTRIES=35000, MAX_ENTRY=6*1024*1024, MAX_JSON=512*1024;
 const BASE='assets/minecraft/';
-const pathOK=p=>/^assets\/minecraft\/(blockstates|models|textures)\/[a-z0-9_./-]+\.(json|png)$/.test(p)&&!p.includes('..');
+const pathOK=p=>(/^assets\/minecraft\/(blockstates|models|textures)\/[a-z0-9_./-]+\.(json|png)$/.test(p)&&!p.includes('..'))||p==='version.json'||p==='pack.mcmeta';
 const LEGACY_DEMO_IDS=Object.freeze({leaves:'oak_leaves',hay:'hay_block',moss:'moss_block',stone_slab:'stone_brick_slab'});
 function stateId(b){const id=String(b?.blockId||b?.type||'minecraft:unknown').replace(/^minecraft:/,'').split('[')[0].replace(/[^a-z0-9_]/g,'');return LEGACY_DEMO_IDS[id]||id;}
 function properties(b){
@@ -43,6 +43,16 @@ function withContext(blocks){
  });
 }
 function uint32(v,p){return v.getUint32(p,true);}function uint16(v,p){return v.getUint16(p,true);}
+function detectVersion(fileName,metadata){
+ const id=metadata&&typeof metadata.id==='string'?metadata.id:'';
+ if(/^[a-z0-9._-]{1,40}$/i.test(id))return id;
+ const name=String(fileName||'');
+ const version=/(?:^|[-_])(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?(?:-(?:pre|rc)\d+)?)\.(?:jar|zip)$/i.exec(name);
+ return version?version[1]:null;
+}
+function classifyArchive(file){
+ return /\.jar$/i.test(String(file?.name||''))?'java-client':'complete-assets-zip';
+}
 function sanitizeName(value,kind){const clean=String(value||'').replace(/^minecraft:/,'');if(!/^[a-z0-9_./-]+$/.test(clean)||clean.includes('..')||clean.startsWith('/'))throw Error('Ungültiger Asset-Pfad');return BASE+kind+'/'+clean;}
 async function inflateRaw(data,expected){
   if(typeof DecompressionStream==='undefined')throw Error('Dein Browser unterstützt das ZIP-Entpacken nicht (DecompressionStream).');
@@ -55,7 +65,14 @@ async function inflateRaw(data,expected){
   for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.length;}return result;
 }
 class ZipArchive {
- constructor(file,entries){this.file=file;this.entries=entries;}
+ constructor(file,entries){
+  this.file=file;this.entries=entries;
+  this.inventory={models:0,textures:0};
+  for(const path of entries.keys()){
+    if(path.startsWith(BASE+'models/'))this.inventory.models++;
+    else if(path.startsWith(BASE+'textures/'))this.inventory.textures++;
+  }
+}
  static async open(file){
   if(!file||typeof file.size!=='number'||file.size<100||file.size>MAX_ARCHIVE)throw Error('Ungültige Datei oder größer als 140 MiB');
   const tailStart=Math.max(0,file.size-(65535+22));const tail=new DataView(await file.slice(tailStart).arrayBuffer());let end=-1;
@@ -74,7 +91,7 @@ class ZipArchive {
     if(pathOK(path)&&!(flags&1)&&(method===0||method===8)&&compressed<=MAX_ENTRY&&raw<=MAX_ENTRY&&local<file.size){entries.set(path,{local,compressed,raw,method,crc:uint32(data,i+16)});}
     i+=46+nameLen+extraLen+commentLen;
   }
-  if(!entries.size||!entries.has(BASE+'textures/block/stone.png')||!entries.has(BASE+'blockstates/stone.json')||!entries.has(BASE+'models/block/stone.json'))throw Error('Keine vollständigen Vanilla-Java-Assets gefunden. Bitte eine Minecraft-Java-Client-JAR mit assets/minecraft auswählen.');
+  if(!entries.size||!entries.has(BASE+'textures/block/stone.png')||!entries.has(BASE+'blockstates/stone.json')||!entries.has(BASE+'models/block/stone.json'))throw Error('Keine vollständigen Vanilla-Java-Assets gefunden. Du benötigst eine Minecraft-Java-Client-JAR mit Blockstates, Modellen und Texturen; reine Texture-Only-ZIPs reichen nicht.');
   return new ZipArchive(file,entries);
  }
  has(path){return this.entries.has(path);}
@@ -96,16 +113,56 @@ function defaultUV(face,from,to){switch(face){
  case 'east':return [16-to[2],16-to[1],16-from[2],16-from[1]];
  default:return [0,0,16,16];}}
 class AssetManager {
- constructor(){this.zip=null;this.status='none';this.source='';this.errors=[];this.jsonCache=new Map();this.dataCache=new Map();this.imageCache=new Map();this.callbacks=new Set();this.pending=new Set();this.processing=null;this.restoring=null;this.version='';}
+ constructor(){this.zip=null;this.status='none';this.source='';this.errors=[];this.jsonCache=new Map();this.dataCache=new Map();this.imageCache=new Map();this.callbacks=new Set();this.pending=new Set();this.processing=null;this.restoring=null;this.version=null;this.kind=null;this.persisted=false;this.missingTypes=new Set();}
  subscribe(fn){this.callbacks.add(fn);return ()=>this.callbacks.delete(fn);}
  notify(){for(const fn of this.callbacks){try{fn(this.info());}catch{}}}
- info(){return {ready:!!this.zip,source:this.source,models:this.dataCache.size,images:[...this.imageCache.values()].filter(i=>i&&i.width).length,missing:this.errors.length,status:this.status};}
- async load(file,{persist=true}={}){
-  this.status='loading';this.notify();try{const zip=await ZipArchive.open(file);this.zip=zip;this.source=file.name||'Minecraft Java';this.dataCache.clear();this.jsonCache.clear();this.imageCache.clear();this.errors=[];this.version=this.source;this.status='ready';this.notify();if(persist){try{await persistFile(file);}catch(e){this.errors.push('Texturen wurden geladen, aber nicht dauerhaft gespeichert: '+e.message);this.notify();}}return this.info();}
-  catch(e){this.status=this.zip?'ready':'none';this.notify();throw e;}
+ info(){
+  const counts=this.zip?.inventory||{models:0,textures:0};
+  return {ready:!!this.zip,source:this.source,kind:this.kind,version:this.version,persisted:this.persisted,
+    archiveModels:counts.models,
+    archiveTextures:counts.textures,
+    models:[...this.dataCache.values()].filter(models=>models?.length).length,
+    images:[...this.imageCache.values()].filter(i=>i&&i.width).length,
+    missing:this.missingTypes.size,missingTypes:[...this.missingTypes].slice(0,12),
+    diagnostics:this.errors.slice(0,12),status:this.status};
  }
- async restore(){if(this.restoring)return this.restoring;this.restoring=(async()=>{try{const file=await savedFile();if(file)await this.load(file,{persist:false});}catch(e){this.errors.push('Gespeicherte Minecraft-Datei konnte nicht geladen werden: '+e.message);this.notify();}})();return this.restoring;}
- async clear(){this.zip=null;this.source='';this.status='none';this.dataCache.clear();this.jsonCache.clear();this.imageCache.clear();this.errors=[];await deleteFile();this.notify();}
+ reportError(message){
+   if(this.errors.length<30&&!this.errors.includes(message))this.errors.push(message);
+ }
+ async load(file,{persist=true,restored=false}={}){
+  this.status='loading';this.notify();
+  try{
+   const zip=await ZipArchive.open(file);
+   let versionMeta=null;
+   try{versionMeta=await zip.json('version.json');}catch{/* metadata is optional */}
+   this.zip=zip;
+   this.source=file.name||'Minecraft Java';
+   this.kind=classifyArchive(file);
+   this.version=detectVersion(file.name,versionMeta);
+   this.persisted=!!restored;
+   this.dataCache.clear();this.jsonCache.clear();this.imageCache.clear();
+   this.missingTypes.clear();this.errors=[];
+   this.status='ready';this.notify();
+   if(persist){
+     try{await persistFile(file);this.persisted=true;}
+     catch(e){this.reportError('Originaltexturen sind aktiv, aber nach dem Neuladen eventuell weg: '+e.message);this.persisted=false;}
+     this.notify();
+   }
+   return this.info();
+  }catch(e){this.status=this.zip?'ready':'none';this.notify();throw e;}
+ }
+ async restore(){
+   if(this.restoring)return this.restoring;
+   this.restoring=(async()=>{try{
+     const file=await savedFile();if(file)await this.load(file,{persist:false,restored:true});
+   }catch(e){this.reportError('Gespeicherte Minecraft-Datei konnte nicht wiederhergestellt werden: '+e.message);this.notify();}})();
+   return this.restoring;
+ }
+ async clear(){
+   this.zip=null;this.source='';this.kind=null;this.version=null;this.persisted=false;this.status='none';
+   this.dataCache.clear();this.jsonCache.clear();this.imageCache.clear();this.missingTypes.clear();this.errors=[];
+   try{await deleteFile();}finally{this.notify();}
+ }
  async json(path){if(this.jsonCache.has(path))return this.jsonCache.get(path);const result=await this.zip.json(path);this.jsonCache.set(path,result);return result;}
  async model(path,seen=new Set()){
   const filename=sanitizeName(path,'models')+'.json';if(seen.has(filename)||seen.size>16)throw Error('Ungültige Model-Vererbung');seen.add(filename);const json=await this.json(filename);if(!json)return null;
@@ -135,32 +192,43 @@ class AssetManager {
   }
   this.imageCache.set(path,bitmap);return bitmap;
  }
- async build(block){const type=stateId(block),props=properties(block);const spec=await this.json(BASE+'blockstates/'+type+'.json');if(!spec)return null;const seed=[type,block?.x||0,block?.y||0,block?.z||0].join('|'),selectors=chooseVariants(spec,props,seed);const output=[];
+ async build(block){const type=stateId(block),props=properties(block);const spec=await this.json(BASE+'blockstates/'+type+'.json');if(!spec){this.missingTypes.add(type);return null;}const seed=[type,block?.x||0,block?.y||0,block?.z||0].join('|'),selectors=chooseVariants(spec,props,seed);const output=[];
   for(const selected of selectors){const m=await this.model(selected.model);if(!m)continue;const elements=[];
    for(const e of m.elements.slice(0,64)){
      if(!Array.isArray(e.from)||!Array.isArray(e.to)||e.from.length!==3||e.to.length!==3)continue;
      const faces={};for(const [face,cfg] of Object.entries(e.faces||{})){
        const path=resolveTexture(cfg.texture,m.textures);if(!path)continue;const image=await this.image(path);
-       if(!image&&this.errors.length<20)this.errors.push(type+': Originaltextur fehlt: '+path);
+       if(!image)this.reportError(type+': Originaltextur fehlt: '+path);
        faces[face]={image,uv:Array.isArray(cfg.uv)?cfg.uv:defaultUV(face,e.from,e.to),rotation:cfg.rotation||0,tintindex:cfg.tintindex??-1,cullface:cfg.cullface||null};
      }
      if(Object.keys(faces).length)elements.push({from:e.from,to:e.to,faces,rotation:e.rotation||null,shade:e.shade!==false});
    }
    if(elements.length)output.push({elements,rotation:{x:selected.x||0,y:selected.y||0},uvlock:!!selected.uvlock});
-  }return output.length?output:null;
+  }if(!output.length)this.missingTypes.add(type);return output.length?output:null;
  }
  key(block){const p=properties(block),type=stateId(block),variant=hashSeed([type,block?.x||0,block?.y||0,block?.z||0].join('|'))%16;return type+'['+Object.entries(p).sort(([a],[b])=>a.localeCompare(b)).map(([a,b])=>a+'='+b).join(',')+']@'+variant;}
  get(block){return this.dataCache.get(this.key(block))||null;}
  async ensure(blocks){if(!this.zip||!Array.isArray(blocks))return;const unique=new Map();for(const b of blocks){const key=this.key(b);if(!unique.has(key))unique.set(key,b);}const keys=[...unique.keys()];
   const queue=keys.filter(k=>!this.dataCache.has(k)&&!this.pending.has(k)).slice(0,1200);if(!queue.length)return;
-  const workers=Array.from({length:Math.min(5,queue.length)},async()=>{while(queue.length){const key=queue.shift(),block=unique.get(key);this.pending.add(key);try{this.dataCache.set(key,await this.build(block)||[]);}catch(e){this.dataCache.set(key,[]);if(this.errors.length<20)this.errors.push(key+': '+e.message);}finally{this.pending.delete(key);}}});await Promise.all(workers);this.notify();
+  const workers=Array.from({length:Math.min(5,queue.length)},async()=>{while(queue.length){const key=queue.shift(),block=unique.get(key);this.pending.add(key);try{this.dataCache.set(key,await this.build(block)||[]);}catch(e){this.dataCache.set(key,[]);this.missingTypes.add(stateId(block));this.reportError(key+': '+e.message);}finally{this.pending.delete(key);}}});await Promise.all(workers);this.notify();
  }
 }
 function indexedDBAvailable(){return typeof indexedDB!=='undefined';}
 function openDB(){return new Promise((resolve,reject)=>{if(!indexedDBAvailable())return reject(Error('IndexedDB ist nicht verfügbar'));const q=indexedDB.open('craftsteps_minecraft_vanilla_assets',1);q.onupgradeneeded=()=>q.result.createObjectStore('files');q.onerror=()=>reject(q.error||Error('Datenbankfehler'));q.onsuccess=()=>resolve(q.result);});}
-async function withDB(mode,operation){const db=await openDB();try{return await new Promise((resolve,reject)=>{const tx=db.transaction('files',mode),req=operation(tx.objectStore('files'));req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||Error('Speicherfehler'));});}finally{db.close();}}
+async function withDB(mode,operation){
+ const db=await openDB();
+ try{return await new Promise((resolve,reject)=>{
+  const tx=db.transaction('files',mode),req=operation(tx.objectStore('files'));
+  let value;
+  req.onsuccess=()=>{value=req.result;};
+  req.onerror=()=>reject(req.error||Error('Speicherzugriff fehlgeschlagen'));
+  tx.oncomplete=()=>resolve(value);
+  tx.onerror=()=>reject(tx.error||Error('Speichertransaktion fehlgeschlagen'));
+  tx.onabort=()=>reject(tx.error||Error('Speichern wurde abgebrochen'));
+ });}finally{db.close();}
+}
 function savedFile(){if(!indexedDBAvailable())return null;return withDB('readonly',s=>s.get('vanilla'));}
 function persistFile(file){return withDB('readwrite',s=>s.put(file,'vanilla'));}
 function deleteFile(){if(!indexedDBAvailable())return Promise.resolve();return withDB('readwrite',s=>s.delete('vanilla'));}
-const manager=new AssetManager();return {ZipArchive,AssetManager,manager,chooseVariants,testWhen,resolveTexture,defaultUV,stateId,properties,withContext};
+const manager=new AssetManager();return {ZipArchive,AssetManager,manager,chooseVariants,testWhen,resolveTexture,defaultUV,stateId,properties,withContext,detectVersion,classifyArchive};
 });

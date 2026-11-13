@@ -120,3 +120,17 @@ Die App hat jetzt eine **eigene** mobile Navigation (Entdecken, Erstellen, Favor
 Im separaten großen 3D-Modus sind Schritt-Zeitleiste, Animationswiedergabe, Animation ein/aus, Zoom, Gesamtansicht, Fokussierung, Unterseitenansicht und Materialübersicht verfügbar. Die Animation respektiert die Browseroption „Bewegungen reduzieren“. Die Navigation und Animationen wurden vollständig eigenständig für CraftSteps programmiert.
 
 **Wichtige Grenzen:** WBuilds ist ein eigenständiges Produkt; CraftSteps übernimmt weder dessen Marke, Grafiken, Screenshots noch fremden Programmcode. Die Umsetzung ist keine exakte Kopie aller WBuilds-Inhalte oder Abonnements. Die 3D-Ansicht ist weiterhin eine Canvas-Projektion, keine vollständige Minecraft-Engine. Exakte Minecraft-Texturen sind nur mit einer vom Nutzer lokal ausgewählten Java-Client-Datei möglich; ohne sie erscheinen neutrale Platzhalter. Eine tatsächlich KI-gestützte, pixelgenaue Blockerkennung aus Screenshots ist nicht enthalten.
+
+
+## V0.8 – Minecraft-Originaltexturen laden und nachvollziehbar prüfen
+
+Der Minecraft-Asset-Importer wird im **gleichen CraftSteps-Projekt** verwendet. Das Importfeld auf der Startseite und im Bauplan-Studio erklärt, wie man die eigene Minecraft-Java-Client-JAR auswählt.
+
+- **Original-Asset-Status**: Es wird deutlich angezeigt, ob die eigenen Originaltexturen aktiv sind, welche Quelldatei geladen wurde, wie viele Textur- und Modelldateien erkannt wurden und ob die Auswahl nach dem Neuladen erhalten bleibt.
+- **Minecraft-Version**: CraftSteps liest wenn vorhanden das \`version.json\` im Java-Archiv (\`id\`) und verwendet sonst ausschließlich eine eindeutig erkennbare Version im Dateinamen, z. B. \`1.21.1.jar\`. Ist beides nicht möglich, steht „Version unbekannt“. Für generische ZIP-Dateien wird keine Version erfunden.
+- **Lokale Speicherung**: Die Datei verbleibt vollständig im eigenen Browser; IndexedDB muss die Transaktion erfolgreich abgeschlossen haben, bevor CraftSteps „lokal gespeichert“ meldet. Wenn die Browserspeicherung nicht möglich ist oder der Browser die Daten löscht, muss die Datei erneut ausgewählt werden.
+- **Fehlerdiagnose**: Fehlende Java-Blockstates/-Modelle, fehlende Texturdateien und Lese- bzw. Speicherfehler werden im Bereich „Diagnose“ gezeigt. Platzhalter gelten weiterhin nicht als Minecraft-Originaltexturen.
+- **Vollständige Dateien**: Ein Texture-Only-Resource-Pack ohne Blockstates und Modelle reicht als einzige Quelle nicht aus. Solche ZIPs werden mit einer erklärenden Fehlermeldung abgelehnt. Primär wird die eigene vollständige Minecraft-Java-Client-JAR unterstützt.
+- **Geräte**: Android-Nutzer können dieselbe eigene Java-Client-Datei zuvor vom PC auf das Handy kopieren. Die Datei wird nicht auf GitHub hochgeladen und nicht mit anderen Geräten synchronisiert.
+
+**Stand der Umsetzung:** Der Import ermöglicht Original-Textur-PNGs und Modelle für unterstützte Minecraft-Blöcke, aber die Canvas-Rendering-Engine ist weiterhin nicht für sämtliche Vanilla-Blockstates oder Biome- und Entity-Effekte pixelgenau. Die Oberfläche darf deshalb nicht behaupten, „alle Blöcke vollständig wie in Minecraft“ darzustellen. Mojang/Microsoft-Assets werden nicht im öffentlichen Repository mitgeliefert.
