@@ -210,3 +210,10 @@ body[data-view="onboarding"] #asset-manager{display:none!important}
 .build-dimensions p{line-height:1.5;color:var(--muted)}
 .material-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
 @media(max-width:480px){.gallery-filters label{flex:1 1 140px}.gallery-filters button{width:100%}}
+
+.guide-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;margin:16px 0;background:var(--soft);border:1px solid var(--line);border-radius:14px}
+.guide-mode-switch button{min-height:46px;border:0;border-radius:10px;background:transparent;color:var(--ink);font:inherit;font-weight:800;cursor:pointer}
+.guide-mode-switch button[aria-pressed="true"]{background:var(--btn);color:var(--btn-ink)}
+.guide-mode-switch button:focus-visible{outline:3px solid var(--brand,#fe6900);outline-offset:2px}
+.image-mode .immersive-launch,.image-mode .motion-toolbar,.image-mode .view-switches,.image-mode .viewer-tools{display:none}
+.image-mode .guide-image .voxel{cursor:default;touch-action:pan-y}

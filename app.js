@@ -24,7 +24,7 @@ function ic(name){return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="
 function esc(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function get(key, fallback){try{const val=localStorage.getItem('craftsteps:'+key);return val==null?fallback:JSON.parse(val);}catch{return fallback;}}
 function put(key,value){try{localStorage.setItem('craftsteps:'+key,JSON.stringify(value));}catch{/* private mode */}}
-const state={yaw:Math.PI/4,pitch:.58,view:get('onboarded',false)?'home':'onboarding',interests:get('interests',[]),onboarded:get('onboarded',false),id:builds[0].id,category:'Alle',query:'',filter:'all',sort:'recommended',size:'all',materialQuery:'',searchOpen:true,rotation:0,zoom:1,followStep:true,immersive3D:false,animateSteps:get('animateSteps',true),theme:get('theme','light'),edition:get('edition','Java'),lang:get('lang','de'),favorites:get('favorites',[]),progress:get('progress',{}),collected:get('collected',{})};
+const state={yaw:Math.PI/4,pitch:.58,view:get('onboarded',false)?'home':'onboarding',interests:get('interests',[]),onboarded:get('onboarded',false),id:builds[0].id,category:'Alle',query:'',filter:'all',sort:'recommended',size:'all',materialQuery:'',searchOpen:true,rotation:0,zoom:1,followStep:true,immersive3D:false,guideMode:get('guideMode','3d'),animateSteps:get('animateSteps',true),theme:get('theme','light'),edition:get('edition','Java'),lang:get('lang','de'),favorites:get('favorites',[]),progress:get('progress',{}),collected:get('collected',{})};
 const motion={token:0,progress:1,from:[]};
 let autoplay=0;
 function pauseGuide(){
@@ -53,7 +53,7 @@ function playGuide(){
 function startStepMotion(previous=[]){
  motion.token++;motion.from=Array.isArray(previous)?previous:[];motion.progress=1;
  const reduced=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
- if(!state.animateSteps||reduced){requestAnimationFrame(drawAll);return;}
+ if(state.guideMode==='image'||!state.animateSteps||reduced){requestAnimationFrame(drawAll);return;}
  motion.progress=0;
  const token=motion.token,begin=performance.now(),duration=720;
  function tick(now){
@@ -136,7 +136,7 @@ function textureNotice(){
   if(window.CraftStepsAssets?.manager?.info().ready)return '';
   return `<aside class="texture-notice" aria-label="Minecraft-Texturen"><div><strong>Minecraft-Texturen</strong><p>Der Browser lädt die Originaltexturen direkt von Mojang. Du kannst auch eine eigene Java-Datei auswählen.</p></div><button class="texture-action" type="button" data-action="load-textures">Original-Assets auswählen</button></aside>`;
 }
-function guide(){const b=findBuild(),num=Math.max(1,Math.min(state.progress[b.id]||1,b.steps.length)),s=stepState(b,num);return `<main class="content guide-layout"><div class="step-pill">${T().step} ${num} / ${b.steps.length}</div><div class="progress-track" role="progressbar" aria-valuenow="${Math.round(100*num/b.steps.length)}" aria-valuemin="0" aria-valuemax="100" aria-label="${T().progress}"><div class="progress-fill" style="width:${100*num/b.steps.length}%"></div></div>${textureNotice()}${b.draft?`<p class="draft-banner">Ungeprüfte Rohschritte – Platzierungsreihenfolge und Mengen selbst prüfen.</p>`:''}<button type="button" class="immersive-launch" data-action="open-3d">${ic('layers')} 3D-Modus bildschirmfüllend öffnen</button><div class="guide-image"><canvas class="voxel" data-build="${b.id}" data-context="guide" role="img" aria-label="Bauzustand ${num}, ${s.current.length} neue Blockpositionen rot markiert"></canvas><div class="viewer-tools">${btn('minus',T().zoomOut,'zoom-out')}${btn('plus',T().zoomIn,'zoom-in')}${btn('rotate',T().rot,'rotate')}</div><span class="viewer-hint">▢ ${T().highlight} · Ziehen: Drehen, auch von unten</span></div><div class="motion-toolbar" role="group" aria-label="Schrittanimation">
+function guide(){const b=findBuild(),num=Math.max(1,Math.min(state.progress[b.id]||1,b.steps.length)),s=stepState(b,num);return `<main class="content guide-layout ${state.guideMode==='image'?'image-mode':'three-mode'}"><div class="step-pill">${T().step} ${num} / ${b.steps.length}</div><div class="progress-track" role="progressbar" aria-valuenow="${Math.round(100*num/b.steps.length)}" aria-valuemin="0" aria-valuemax="100" aria-label="${T().progress}"><div class="progress-fill" style="width:${100*num/b.steps.length}%"></div></div>${textureNotice()}${b.draft?`<p class="draft-banner">Ungeprüfte Rohschritte – Platzierungsreihenfolge und Mengen selbst prüfen.</p>`:''}<div class="guide-mode-switch" role="group" aria-label="${state.lang==='en'?'View mode':'Ansicht'}"><button type="button" data-action="guide-mode" data-id="image" aria-pressed="${state.guideMode==='image'}">${state.lang==='en'?'Image':'Bild'}</button><button type="button" data-action="guide-mode" data-id="3d" aria-pressed="${state.guideMode==='3d'}">3D</button></div><button type="button" class="immersive-launch" data-action="open-3d">${ic('layers')} 3D-Modus bildschirmfüllend öffnen</button><div class="guide-image"><canvas class="voxel" data-build="${b.id}" data-context="guide" role="img" aria-label="Bauzustand ${num}, ${s.current.length} neue Blockpositionen rot markiert"></canvas><div class="viewer-tools">${btn('minus',T().zoomOut,'zoom-out')}${btn('plus',T().zoomIn,'zoom-in')}${btn('rotate',T().rot,'rotate')}</div><span class="viewer-hint">▢ ${T().highlight} ${state.guideMode==='image'?'':' · Ziehen: Drehen, auch von unten'}</span></div><div class="motion-toolbar" role="group" aria-label="Schrittanimation">
   <button type="button" data-action="replay-step">${ic('play')} Animierten Schritt abspielen</button>
   <button type="button" data-action="toggle-motion" aria-pressed="${state.animateSteps?'true':'false'}">Animation ${state.animateSteps?'an':'aus'}</button>
  </div><div class="view-switches" role="group" aria-label="3D-Kamerasteuerung"><button type="button" data-action="toggle-focus" aria-pressed="${state.followStep?'true':'false'}">${state.followStep?'Gesamtes Bauwerk':'Schritt fokussieren'}</button><button type="button" data-action="view-below">Unterseite ansehen</button><button type="button" data-action="view-above">Von oben ansehen</button></div><div class="guide-info" style="padding-top:13px"><span>${esc(b.name)}</span><span>${s.current.length} ${T().blocks} in diesem Schritt</span></div><h2 class="guide-material-head">${T().blocks}</h2><div class="step-items">${Object.entries(s.stepMaterials).map(([type,n])=>`<div class="step-item material-tile" style="${materialStyle(type)}">${matIcon(type)}<span>${esc(loc(type))} ×${n}</span></div>`).join('')||`<p class="subtext">Keine Inventargegenstände benötigt.</p>`}</div><details class="coordinate-card"><summary>Blockpositionen anzeigen</summary><div class="coordinate-list">${Object.entries(s.current.reduce((groups,block)=>{(groups[block.type]??=[]).push(block);return groups;},{})).map(([type,blocks])=>`<div class="coordinate-group" style="${materialStyle(type)}"><strong>${esc(loc(type))} ×${blocks.length}</strong><div>${blocks.map(block=>`<small>X ${block.x} · Y ${block.y} · Z ${block.z}</small>`).join('')}</div></div>`).join('')}</div></details><div class="nav-controls"><button data-action="prev" class="primary" ${num<=1?'disabled':''}>${ic('back')} ${T().goBack}</button><button data-action="next" class="primary" ${num>=b.steps.length?'disabled':''}>${T().next} ${ic('next')}</button></div><div class="actions-row"><button data-action="materials" class="secondary">${ic('box')} ${T().viewMaterials}</button><button data-action="reset-progress" class="secondary">${ic('rotate')} ${T().progress} zurücksetzen</button></div><p class="footer-note">${T().save} · ← / → ${T().steps} navigieren</p></main>`;}
@@ -176,20 +176,21 @@ function drawCanvas(canvas){
   const build=builds.find(b=>b.id===canvas.dataset.build);
   if(!build||!visuals)return;
   const isGuide=canvas.dataset.context==='guide';
+  const still=isGuide&&state.guideMode==='image'&&!state.immersive3D;
   const n=Math.max(1,Math.min(state.progress[build.id]||1,build.steps.length));
   const progress=isGuide?stepState(build,n):null;
   visuals.draw(canvas,build,{
     blocks:progress?progress.placed:build.blocks,
     highlight:progress?progress.current:[],
-    yaw:canvas.dataset.context==='card'?Math.PI/4:state.yaw,
-    pitch:canvas.dataset.context==='card'?.58:state.pitch,
-    zoom:canvas.dataset.context==='card'?1:state.zoom,
+    yaw:still||canvas.dataset.context==='card'?Math.PI/4:state.yaw,
+    pitch:still||canvas.dataset.context==='card'?.58:state.pitch,
+    zoom:still||canvas.dataset.context==='card'?1:state.zoom,
     context:canvas.closest('.immersive3d')?'immersive':canvas.dataset.context,
     hideBadge:!!canvas.closest('.immersive3d'),
-    followStep:isGuide&&state.followStep,
-    stepReveal:isGuide?motion.progress:1,
-    fromHighlight:isGuide&&motion.progress<1?motion.from:null,
-    cameraBlend:isGuide?motion.progress:1,
+    followStep:isGuide&&!still&&state.followStep,
+    stepReveal:isGuide&&!still?motion.progress:1,
+    fromHighlight:isGuide&&!still&&motion.progress<1?motion.from:null,
+    cameraBlend:isGuide&&!still?motion.progress:1,
     limit:canvas.dataset.context==='card'?1200:4000
   });
 }
@@ -200,7 +201,7 @@ window.addEventListener('craftsteps:assets',()=>{requestAnimationFrame(drawAll);
 let dragging=null;
 document.addEventListener('pointerdown',ev=>{
   const canvas=ev.target.closest('canvas.voxel');
-  if(!canvas||canvas.dataset.context==='card')return;
+  if(!canvas||canvas.dataset.context==='card'||(canvas.dataset.context==='guide'&&state.guideMode==='image'&&!state.immersive3D))return;
   dragging={pointer:ev.pointerId,x:ev.clientX,y:ev.clientY,canvas};
   canvas.setPointerCapture?.(ev.pointerId);
 });
@@ -216,6 +217,7 @@ for(const eventName of ['pointerup','pointercancel'])document.addEventListener(e
 function materialText(){const b=findBuild();return `${b.name}\n${Object.entries(countMaterials(b.blocks)).map(([k,n])=>`${loc(k)}: ${n} (${stacks(k,n)})`).join('\n')}`;}
 async function copy(text){try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);}else{const t=document.createElement('textarea');t.value=text;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.focus();t.select();if(!document.execCommand('copy'))throw Error('copy');t.remove();}return true;}catch{return false;}}
 function clicked(event){const el=event.target.closest('[data-action]');if(!el)return;const a=el.dataset.action,id=el.dataset.id,b=findBuild();switch(a){
+ case 'guide-mode':if(!['image','3d'].includes(id))break;pauseGuide();dragging=null;motion.token++;motion.progress=1;motion.from=[];state.guideMode=id;put('guideMode',id);render();document.querySelector('[data-action="guide-mode"][data-id="'+id+'"]')?.focus();break;
  case 'clear-filters':state.query='';state.category='Alle';state.filter='all';state.sort='recommended';state.size='all';render();break;
  case 'reset-materials':state.collected[b.id]=[];put('collected',state.collected);render();break;
  case 'home':state.category='Alle';navigate('home');break;case 'show-favorites':state.category='Favoriten';navigate('home');break;case 'settings':navigate('settings');break;case 'back':navigate(state.view==='guide'||state.view==='materials'?'detail':'home');break;
@@ -232,7 +234,7 @@ function clicked(event){const el=event.target.closest('[data-action]');if(!el)re
  case 'prev':case 'next':{pauseGuide();const n=state.progress[b.id]||1;changeGuideStep(n+(a==='next'?1:-1));break;}
  case 'mark':{let list=state.collected[b.id]||[];list=list.includes(id)?list.filter(x=>x!==id):[...list,id];state.collected[b.id]=list;put('collected',state.collected);render();break;}
  case 'load-textures':{const input=document.getElementById('vanilla-file');if(input)input.click();else document.getElementById('asset-manager')?.scrollIntoView({behavior:'smooth'});break;}
- case 'open-3d':state.immersive3D=true;render();startStepMotion([]);break;
+ case 'open-3d':state.guideMode='3d';put('guideMode','3d');state.immersive3D=true;render();startStepMotion([]);break;
  case 'play-guide':if(autoplay)pauseGuide();else playGuide();break;
  case 'replay-step':pauseGuide();startStepMotion([]);break;
  case 'toggle-motion':state.animateSteps=!state.animateSteps;put('animateSteps',state.animateSteps);render();if(state.animateSteps)startStepMotion([]);break;
