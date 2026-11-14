@@ -291,7 +291,7 @@
       const appearing=!opts.inPlaceReveal&&placement<1;
       const rendered=appearing?{...b,y:b.y+(1-placement)*.48}:b;
       const opacity=appearing?Math.max(.04,placement):1;
-      const blockScale=appearing?.8+.2*placement:1;
+      const blockScale=appearing ? (0.8+0.2*placement) : 1;
       const blockProject=blockScale===1?project:(x,y,z)=>{
         const cx=rendered.x+.5,cy=rendered.y+.5,cz=rendered.z+.5;
         return project(cx+(x-cx)*blockScale,cy+(y-cy)*blockScale,cz+(z-cz)*blockScale);
