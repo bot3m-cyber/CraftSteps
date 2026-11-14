@@ -106,6 +106,12 @@
     }
     return Number.isFinite(result.minX)?result:null;
   }
+  function interpolateGuideCamera(from,to,t){
+    const delta=Math.atan2(Math.sin(to.yaw-from.yaw),Math.cos(to.yaw-from.yaw));
+    const bounds={};
+    for(const key of Object.keys(to.bounds))bounds[key]=from.bounds[key]+(to.bounds[key]-from.bounds[key])*t;
+    return {yaw:from.yaw+delta*t,pitch:from.pitch+(to.pitch-from.pitch)*t,bounds};
+  }
   function makeProject(width,height,build,opts={}){
     // Negative elevation lets the user view the underside of a platform.
     const yaw=opts.yaw??PI/4,pitch=mathClamp(opts.pitch??.56,-1.42,1.42),zoom=mathClamp(opts.zoom??1,.45,3);
@@ -113,7 +119,7 @@
     const maxY=build.height||Math.max(1,...blocks.map(b=>b.y+1));
     const spanX=build.width||Math.max(1,...blocks.map(b=>b.x+1));
     const spanZ=build.depth||Math.max(1,...blocks.map(b=>b.z+1));
-    let focus=boundsFor(opts.focus);
+    let focus=opts.cameraBounds||boundsFor(opts.focus);
     const nextFocus=focus;
     const previous=boundsFor(opts.fromFocus);
     // Interpolate the visible step bounds, so the camera glides rather than jumping.
@@ -249,7 +255,7 @@
       const grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'#c8e1e9');grad.addColorStop(.64,'#e5edf0');grad.addColorStop(.641,'#b9d39b');grad.addColorStop(1,'#82a974');ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
       }
     }else{ctx.clearRect(0,0,w,h);}
-    const {project,depth,scale,yaw,pitch}=makeProject(w,h,build,{yaw:opts.yaw,pitch:opts.pitch,zoom:opts.icon?1.45:opts.zoom,focus:opts.followStep?opts.highlight:null,fromFocus:opts.followStep?opts.fromHighlight:null,focusBlend:opts.cameraBlend});
+    const {project,depth,scale,yaw,pitch}=makeProject(w,h,build,{yaw:opts.yaw,pitch:opts.pitch,zoom:opts.icon?1.45:opts.zoom,focus:opts.followStep?opts.highlight:null,fromFocus:opts.followStep?opts.fromHighlight:null,focusBlend:opts.cameraBlend,cameraBounds:opts.cameraBounds});
     const blocks=opts.blocks||build.blocks, highlighted=opts.highlight||[];
     // Deliberate rendering budget keeps a malformed import from freezing mobile browsers.
     const limit=opts.icon?1:(opts.limit|| (w<350?1400:4000));
@@ -263,16 +269,20 @@
     const faces=[];
     const manager=assets(),ready=!!manager?.info().ready;
     if(ready)void manager.ensure(chosen).catch(e=>console.warn('Vanilla assets:',e));
-    const chosenFull=new Set(chosen.filter(isFullCube).map(b=>`${b.x}|${b.y}|${b.z}`));
+    const frameBlocks=chosen.filter(block=>{
+      const index=stepPositions.get(`${block.x}|${block.y}|${block.z}`);
+      return !opts.inPlaceReveal||index===undefined||reveal>=index/Math.max(1,highlighted.length)*.8;
+    });
+    const chosenFull=new Set(frameBlocks.filter(isFullCube).map(b=>`${b.x}|${b.y}|${b.z}`));
     const opaqueDirs={east:[1,0,0],west:[-1,0,0],top:[0,1,0],bottom:[0,-1,0],north:[0,0,-1],south:[0,0,1]};
     const outlineColors=opts.outlineColors||materialOutlineColors(highlighted);
     let missing=0;
-    for(const b of chosen){
+    for(const b of frameBlocks){
       const index=stepPositions.get(b.x+'|'+b.y+'|'+b.z);
       const outline=index===undefined?null:outlineColors.get(b.type||rawName(b));
       const delay=(index||0)/Math.max(1,highlighted.length-1)*.48;
       const placement=opts.icon||index===undefined?1:mathClamp((reveal-delay)/.52,0,1);
-      const appearing=placement<1;
+      const appearing=!opts.inPlaceReveal&&placement<1;
       const rendered=appearing?{...b,y:b.y+(1-placement)*.65}:b;
       const opacity=appearing?Math.max(.06,placement):1;
       const model=ready?manager.get(b):null;
@@ -325,5 +335,5 @@
     return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});
   }
   function drawIcons(scope){if(typeof document==='undefined')return;for(const el of (scope||document).querySelectorAll('canvas[data-mat-icon]'))drawIcon(el,el.dataset.matIcon);}
-  return {materialOutlineColors,styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode,boundsFor,makeProject};
+  return {interpolateGuideCamera,materialOutlineColors,styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode,boundsFor,makeProject};
 });

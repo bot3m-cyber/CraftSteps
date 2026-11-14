@@ -25,7 +25,7 @@ function esc(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<'
 function get(key, fallback){try{const val=localStorage.getItem('craftsteps:'+key);return val==null?fallback:JSON.parse(val);}catch{return fallback;}}
 function put(key,value){try{localStorage.setItem('craftsteps:'+key,JSON.stringify(value));}catch{/* private mode */}}
 const state={yaw:Math.PI/4,pitch:.58,view:get('onboarded',false)?'home':'onboarding',interests:get('interests',[]),onboarded:get('onboarded',false),id:builds[0].id,category:'Alle',query:'',filter:'all',sort:'recommended',size:'all',materialQuery:'',searchOpen:true,rotation:0,zoom:1,followStep:true,immersive3D:false,guideMode:'image',animateSteps:get('animateSteps',true),theme:get('theme','light'),edition:get('edition','Java'),lang:get('lang','de'),favorites:get('favorites',[]),progress:get('progress',{}),collected:get('collected',{})};
-const motion={token:0,progress:1,from:[]};
+const motion={token:0,progress:1,reveal:1,from:null,target:null};
 let autoplay=0;
 function pauseGuide(){
  clearTimeout(autoplay);
@@ -50,19 +50,36 @@ function playGuide(){
  }
  schedule();
 }
-function startStepMotion(previous=[]){
- motion.token++;motion.from=Array.isArray(previous)?previous:[];motion.progress=1;
+function guideCamera(build,step){
+ const data=stepState(build,step);
+ const bounds=visuals.boundsFor(data.current);
+ const centerX=(bounds.minX+bounds.maxX)/2-build.width/2;
+ const centerZ=(bounds.minZ+bounds.maxZ)/2-build.depth/2;
+ const yaw=Math.hypot(centerX,centerZ)>1?Math.atan2(centerX,centerZ):Math.PI/4;
+ const height=build.height||visuals.boundsFor(build.blocks).maxY;
+ const pitch=step===1?.95:bounds.minY>=height*.67?.88:.42;
+ return {yaw,pitch,bounds};
+}
+function visibleGuideCamera(){
+ const target=motion.target||guideCamera(findBuild(),state.progress[state.id]||1);
+ if(!motion.from||motion.progress===1)return target;
+ return visuals.interpolateGuideCamera(motion.from,target,motion.progress);
+}
+function startStepMotion(previous=null){
+ motion.token++;motion.from=previous;motion.target=null;motion.progress=1;motion.reveal=1;
  const reduced=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  if(state.guideMode==='image'||!state.animateSteps||reduced){requestAnimationFrame(drawAll);return;}
- motion.progress=0;
- const token=motion.token,begin=performance.now(),duration=720;
+ motion.target=guideCamera(findBuild(),state.progress[state.id]||1);
+ motion.progress=0;motion.reveal=0;
+ const token=motion.token,begin=performance.now(),duration=900;
  function tick(now){
    if(token!==motion.token||state.view!=='guide')return;
    const t=Math.max(0,Math.min(1,(now-begin)/duration));
-   motion.progress=1-Math.pow(1-t,3);
+   motion.progress=t*t*(3-2*t);
+   motion.reveal=t;
    document.querySelectorAll('canvas[data-context="guide"]').forEach(drawCanvas);
    if(t<1)requestAnimationFrame(tick);
-   else motion.from=[];
+   else motion.from=null;
  }
  requestAnimationFrame(tick);
 }
@@ -70,7 +87,7 @@ function changeGuideStep(next){
  const b=findBuild(),current=state.progress[b.id]||1;
  next=Math.max(1,Math.min(b.steps.length,Math.round(Number(next)||current)));
  if(next===current)return;
- const previous=stepState(b,current).current;
+ const previous=state.guideMode==='3d'&&state.followStep?visibleGuideCamera():null;
  state.progress[b.id]=next;put('progress',state.progress);
  render();startStepMotion(previous);revealStepViewer();
 }
@@ -229,7 +246,7 @@ function immersive3D(){
 }
 function settings(){return `<main class="content settings-page"><h1 class="page-title">${T().settings}</h1><p class="subtext">${T().settingsNote}</p><div class="section-heading"><h2>${T().appearance}</h2></div><section class="settings-group"><div class="settings-line"><div><strong>${T().theme}</strong><small>${T().light} / ${T().dark}</small></div><select id="theme-select" class="select"><option value="light" ${state.theme==='light'?'selected':''}>${T().light}</option><option value="dark" ${state.theme==='dark'?'selected':''}>${T().dark}</option></select></div><div class="settings-line"><div><strong>${T().language}</strong><small>Deutsch / English</small></div><select id="lang-select" class="select"><option value="de" ${state.lang==='de'?'selected':''}>Deutsch</option><option value="en" ${state.lang==='en'?'selected':''}>English</option></select></div><div class="settings-line"><div><strong>${T().interests}</strong><small>${T().interestsHint}</small></div><button class="secondary" data-action="edit-interests">${T().edit}</button></div><div class="settings-line"><div><strong>${T().edition}</strong><small>Java / Bedrock / Pocket</small></div><select id="edition-select" class="select">${['Java','Bedrock','Pocket'].map(x=>`<option value="${x}" ${state.edition===x?'selected':''}>${x}</option>`).join('')}</select></div></section><div class="section-heading"><h2>${T().info}</h2></div><div class="meta-note">${T().license}<br><br>${T().hold}<br><br><strong>${builds.length} ${T().demo}</strong><br>Renderings werden direkt aus gespeicherten 3D-Koordinaten erstellt.</div><a class="import-entry" href="studio.html">${ic('plus')} Eigene Bauwerke importieren und verwalten <span>→</span></a><button data-action="reset-all" class="secondary" style="width:100%">${T().reset}</button></main>`;}
 function render(focusId=null){document.body.classList.toggle('dark',state.theme==='dark');document.documentElement.lang=state.lang;document.querySelector('meta[name="theme-color"]').content=state.theme==='dark'?'#161917':'#ffffff';document.body.dataset.view=state.view;const body=state.view==='onboarding'?onboarding():state.view==='home'?home():state.view==='detail'?detail():state.view==='materials'?mats():state.view==='guide'?guide():settings();document.body.classList.toggle('imm-open',state.immersive3D);document.getElementById('app').innerHTML=`<div class="app-shell">${state.view==='onboarding'?body:header()+body+bottomNav()}</div>`+(state.immersive3D&&state.view==='guide'?immersive3D():'');window.dispatchEvent(new CustomEvent('craftsteps:view'));requestAnimationFrame(drawAll);if(focusId){const el=document.getElementById(focusId);if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}}
-function navigate(view,id){pauseGuide();if(id)state.id=id;if(view==='guide'&&state.view!=='guide')state.guideMode='image';state.view=view;state.detailAngle=0;syncRoute(view);state.rotation=0;state.yaw=Math.PI/4;state.pitch=.58;state.zoom=1;state.followStep=true;state.immersive3D=false;motion.token++;motion.progress=1;motion.from=[];state.materialQuery='';render();window.scrollTo({top:0,behavior:'instant'});}
+function navigate(view,id){pauseGuide();if(id)state.id=id;if(view==='guide'&&state.view!=='guide')state.guideMode='image';state.view=view;state.detailAngle=0;syncRoute(view);state.rotation=0;state.yaw=Math.PI/4;state.pitch=.58;state.zoom=1;state.followStep=true;state.immersive3D=false;motion.token++;motion.progress=1;motion.reveal=1;motion.from=null;motion.target=null;state.materialQuery='';render();window.scrollTo({top:0,behavior:'instant'});}
 function drawCanvas(canvas){
   const build=builds.find(b=>b.id===canvas.dataset.build);
   if(!build||!visuals)return;
@@ -237,20 +254,21 @@ function drawCanvas(canvas){
   const still=isGuide&&state.guideMode==='image'&&!state.immersive3D;
   const n=Math.max(1,Math.min(state.progress[build.id]||1,build.steps.length));
   const progress=isGuide?stepState(build,n):null;
+  const camera=isGuide&&(still||state.followStep)?(still?guideCamera(build,n):visibleGuideCamera()):null;
   visuals.draw(canvas,build,{
     blocks:progress?progress.placed:build.blocks,
     highlight:progress?progress.current:[],
     outlineColors:isGuide?visuals.materialOutlineColors(build.blocks):null,
     guideStage:isGuide,
-    yaw:still?(n===1?0:Math.PI/4+(Math.floor((n-2)/4)%4)*Math.PI/2):canvas.dataset.context==='card'?Math.PI/4:state.yaw,
-    pitch:still?(n===1?1.5:.55):canvas.dataset.context==='card'?.58:state.pitch,
+    yaw:camera?.yaw??(canvas.dataset.context==='card'?Math.PI/4:state.yaw),
+    pitch:camera?.pitch??(canvas.dataset.context==='card'?.58:state.pitch),
     zoom:still||canvas.dataset.context==='card'?1:state.zoom,
     context:canvas.closest('.immersive3d')?'immersive':canvas.dataset.context,
     hideBadge:!!canvas.closest('.immersive3d'),
-    followStep:isGuide&&(still?n>1:state.followStep),
-    stepReveal:isGuide&&!still?motion.progress:1,
-    fromHighlight:isGuide&&!still&&motion.progress<1?motion.from:null,
-    cameraBlend:isGuide&&!still?motion.progress:1,
+    followStep:!!camera,
+    cameraBounds:camera?.bounds,
+    inPlaceReveal:isGuide,
+    stepReveal:isGuide&&!still?motion.reveal:1,
     limit:canvas.dataset.context==='card'?1200:4000
   });
 }
@@ -264,6 +282,12 @@ let dragging=null;
 document.addEventListener('pointerdown',ev=>{
   const canvas=ev.target.closest('canvas.voxel');
   if(!canvas||canvas.dataset.context==='card'||(canvas.dataset.context==='guide'&&state.guideMode==='image'&&!state.immersive3D))return;
+  if(canvas.dataset.context==='guide'&&state.followStep){
+   const camera=visibleGuideCamera();
+   state.yaw=camera.yaw;
+   state.pitch=camera.pitch;
+   state.followStep=false;
+  }
   dragging={pointer:ev.pointerId,x:ev.clientX,y:ev.clientY,canvas};
   canvas.setPointerCapture?.(ev.pointerId);
 });
@@ -281,7 +305,7 @@ async function copy(text){try{if(navigator.clipboard&&window.isSecureContext){aw
 function clicked(event){const el=event.target.closest('[data-action]');if(!el)return;const a=el.dataset.action,id=el.dataset.id,b=findBuild();switch(a){
  case 'example-image-guide':state.guideMode='image';navigate('guide','starterhuette');break;
  case 'zoom-step-image':{const dialog=document.getElementById('step-image-dialog');if(dialog&&!dialog.open){dialog.showModal();const canvas=dialog.querySelector('canvas');if(canvas)drawCanvas(canvas);}break;}
- case 'guide-mode':if(!['image','3d'].includes(id)||state.guideMode===id)break;pauseGuide();dragging=null;motion.token++;motion.progress=1;motion.from=[];state.guideMode=id;render();document.querySelector('[data-action="guide-mode"][data-id="'+id+'"]')?.focus();break;
+ case 'guide-mode':if(!['image','3d'].includes(id)||state.guideMode===id)break;pauseGuide();dragging=null;motion.token++;motion.progress=1;motion.reveal=1;motion.from=null;motion.target=null;state.guideMode=id;render();document.querySelector('[data-action="guide-mode"][data-id="'+id+'"]')?.focus();break;
  case 'clear-filters':state.query='';state.category='Alle';state.filter='all';state.sort='recommended';state.size='all';render();break;
  case 'reset-materials':state.collected[b.id]=[];put('collected',state.collected);render();break;
  case 'home':state.category='Alle';navigate('home');break;case 'show-favorites':state.category='Favoriten';navigate('home');break;case 'settings':navigate('settings');break;case 'back':navigate(state.view==='guide'||state.view==='materials'?'detail':'home');break;
@@ -301,20 +325,20 @@ function clicked(event){const el=event.target.closest('[data-action]');if(!el)re
   break;
  }
  case 'favorite':{const buildId=id||b.id;state.favorites=state.favorites.includes(buildId)?state.favorites.filter(x=>x!==buildId):[...state.favorites,buildId];put('favorites',state.favorites);render();break;}
- case 'guide':if(!state.progress[b.id]){state.progress[b.id]=1;put('progress',state.progress);}navigate('guide');startStepMotion([]);break;
+ case 'guide':if(!state.progress[b.id]){state.progress[b.id]=1;put('progress',state.progress);}navigate('guide');startStepMotion();break;
  case 'materials':navigate('materials');break;
  case 'prev':case 'next':{pauseGuide();const n=state.progress[b.id]||1;changeGuideStep(n+(a==='next'?1:-1));break;}
  case 'mark':{let list=state.collected[b.id]||[];list=list.includes(id)?list.filter(x=>x!==id):[...list,id];state.collected[b.id]=list;put('collected',state.collected);render();break;}
  case 'load-textures':{const input=document.getElementById('vanilla-file');if(input)input.click();else document.getElementById('asset-manager')?.scrollIntoView({behavior:'smooth'});break;}
- case 'open-3d':state.guideMode='3d';state.immersive3D=true;render();startStepMotion([]);break;
+ case 'open-3d':state.guideMode='3d';state.immersive3D=true;render();startStepMotion();break;
  case 'play-guide':if(autoplay)pauseGuide();else playGuide();break;
- case 'replay-step':pauseGuide();startStepMotion([]);break;
- case 'toggle-motion':state.animateSteps=!state.animateSteps;put('animateSteps',state.animateSteps);render();if(state.animateSteps)startStepMotion([]);break;
+ case 'replay-step':pauseGuide();startStepMotion();break;
+ case 'toggle-motion':state.animateSteps=!state.animateSteps;put('animateSteps',state.animateSteps);render();if(state.animateSteps)startStepMotion();break;
  case 'close-3d':pauseGuide();state.immersive3D=false;render();break;
  case 'toggle-focus':state.followStep=!state.followStep;render();break;
- case 'view-below':state.pitch=-.76;render();break;
- case 'view-above':state.pitch=.66;render();break;
- case 'rotate':state.rotation=(state.rotation+1)%4;state.yaw+=Math.PI/2;render();break;
+ case 'view-below':state.yaw=state.followStep?visibleGuideCamera().yaw:state.yaw;state.followStep=false;state.pitch=-.76;render();break;
+ case 'view-above':state.yaw=state.followStep?visibleGuideCamera().yaw:state.yaw;state.followStep=false;state.pitch=.66;render();break;
+ case 'rotate':if(state.view==='guide'&&state.followStep){const camera=visibleGuideCamera();state.yaw=camera.yaw;state.pitch=camera.pitch;state.followStep=false;}state.rotation=(state.rotation+1)%4;state.yaw+=Math.PI/2;render();break;
  case 'zoom-in':state.zoom=Math.min(1.6,state.zoom+.13);render();break;
  case 'zoom-out':state.zoom=Math.max(.65,state.zoom-.13);render();break;
  case 'reset-progress':if(confirm(T().resetQuestion)){delete state.progress[b.id];put('progress',state.progress);navigate('detail');}break;
