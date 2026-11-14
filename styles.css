@@ -224,3 +224,7 @@ body[data-view="onboarding"] #asset-manager{display:none!important}
 #step-image-dialog::backdrop{background:#000b}
 #step-image-dialog canvas{display:block;width:100%;height:min(66dvh,68vw);border-radius:8px}
 .step-image-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+
+.image-mode .guide-image{aspect-ratio:auto;min-height:0;background:#f1f4f7}
+.step-picture{display:block;width:100%;height:min(55dvh,490px);object-fit:contain;padding:12px 12px 36px}
+#step-image-dialog img{display:block;width:100%;height:min(75dvh,680px);object-fit:contain;background:#f1f4f7;border-radius:8px}

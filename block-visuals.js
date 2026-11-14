@@ -213,7 +213,7 @@
       }
     }return out;
   }
-  function drawOutline(ctx,block,project,scale,yaw,pitch){
+  function drawOutline(ctx,block,project,scale,yaw,pitch,color){
     const x=block.x,y=block.y,z=block.z;
     const all=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]].map(([a,b,c])=>project(x+a,y+b,z+c));
     const visibleFaces=[
@@ -230,7 +230,7 @@
       if(!seen.has(key)){seen.add(key);edges.push([a,b]);}
     }}
     ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
-    for(const [i,j] of edges){ctx.beginPath();ctx.moveTo(all[i].x,all[i].y);ctx.lineTo(all[j].x,all[j].y);ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=Math.max(2.4,Math.min(5,scale*.13));ctx.stroke();ctx.strokeStyle='#ed3537';ctx.lineWidth=Math.max(1.35,Math.min(3,scale*.073));ctx.stroke();}
+    for(const [i,j] of edges){ctx.beginPath();ctx.moveTo(all[i].x,all[i].y);ctx.lineTo(all[j].x,all[j].y);ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=Math.max(2.4,Math.min(5,scale*.13));ctx.stroke();ctx.strokeStyle=color;ctx.lineWidth=Math.max(1.35,Math.min(3,scale*.073));ctx.stroke();}
     ctx.restore();
   }
   function textureMode(){const info=assets()?.info();return info?.ready?'vanilla':info?.status==='loading'?'loading':'missing';}
@@ -289,11 +289,13 @@
     faces.sort((a,b)=>a.depth-b.depth);
     for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id);}ctx.globalAlpha=1;
     // Highlight is generated from the precise integer voxel coordinates, never AI image analysis.
+    const palette=['#e73752','#167ac9','#198648','#9939c0','#be5e0c','#0c8587'];
+    const types=[...new Set(highlighted.map(block=>block.type))];
     for(const b of highlighted.slice(0,64)){
       ctx.save();
       // Exact red block-position outlines stay fixed even during placement animation.
       ctx.globalAlpha=.82+.18*Math.sin(reveal*Math.PI/2);
-      drawOutline(ctx,b,project,scale,yaw,pitch);
+      drawOutline(ctx,b,project,scale,yaw,pitch,palette[types.indexOf(b.type)%palette.length]);
       ctx.restore();
     }
     ctx.globalAlpha=1;
