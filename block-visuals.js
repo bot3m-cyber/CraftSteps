@@ -242,6 +242,13 @@
     const outlineColors=new Map(types.map((type,i)=>[type,palette[i]||'hsl('+((i*137.508)%360).toFixed(3)+', 78%, '+(i%2?34:44)+'%)']));
     return outlineColors;
   }
+  // All new blocks use the same eased placement curve, with a small stagger.
+  function stepPlacement(reveal,index,total) {
+    const t=mathClamp(Number.isFinite(reveal)?reveal:1,0,1);
+    const delay=Math.max(0,index)/Math.max(1,total-1)*.25;
+    const local=mathClamp((t-delay)/.75,0,1);
+    return 1-Math.pow(1-local,2);
+  }
   function draw(canvas,build,opts={}){
     if(!canvas||!build||!canvas.getContext)return {rendered:0};
     const ctx=canvas.getContext('2d');if(!ctx)return {rendered:0};
@@ -280,14 +287,18 @@
     for(const b of frameBlocks){
       const index=stepPositions.get(b.x+'|'+b.y+'|'+b.z);
       const outline=index===undefined?null:outlineColors.get(b.type||rawName(b));
-      const delay=(index||0)/Math.max(1,highlighted.length-1)*.48;
-      const placement=opts.icon||index===undefined?1:mathClamp((reveal-delay)/.52,0,1);
+      const placement=opts.icon||index===undefined?1:stepPlacement(reveal,index,highlighted.length);
       const appearing=!opts.inPlaceReveal&&placement<1;
-      const rendered=appearing?{...b,y:b.y+(1-placement)*.65}:b;
-      const opacity=appearing?Math.max(.06,placement):1;
+      const rendered=appearing?{...b,y:b.y+(1-placement)*.48}:b;
+      const opacity=appearing?Math.max(.04,placement):1;
+      const blockScale=appearing ? (0.8+0.2*placement) : 1;
+      const blockProject=blockScale===1?project:(x,y,z)=>{
+        const cx=rendered.x+.5,cy=rendered.y+.5,cz=rendered.z+.5;
+        return project(cx+(x-cx)*blockScale,cy+(y-cy)*blockScale,cz+(z-cz)*blockScale);
+      };
       const model=ready?manager.get(b):null;
       if(model?.length){
-        const textured=assetFacesFor(rendered,model,project,depth,yaw,pitch,chosenFull);
+        const textured=assetFacesFor(rendered,model,blockProject,depth,yaw,pitch,chosenFull);
         for(const face of textured){face.alpha=opacity;face.outline=outline;}
         faces.push(...textured);continue;
       }
@@ -299,7 +310,7 @@
         if(opaque&&chosenFull.has(`${b.x+d[0]}|${b.y+d[1]}|${b.z+d[2]}`))continue;
         const points=f.pts(part).map(v=>[v[0]+rendered.x,v[1]+rendered.y,v[2]+rendered.z]);
         const avg=points.reduce((sum,v)=>sum.map((n,i)=>n+v[i]/4),[0,0,0]);
-        faces.push({poly:points.map(p=>project(...p)),depth:depth(...avg),texture:null,type:rawName(b),id:f.id,alpha:opacity,outline});
+        faces.push({poly:points.map(p=>blockProject(...p)),depth:depth(...avg),texture:null,type:rawName(b),id:f.id,alpha:opacity,outline});
       }
     }
     faces.sort((a,b)=>a.depth-b.depth);
@@ -335,5 +346,5 @@
     return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});
   }
   function drawIcons(scope){if(typeof document==='undefined')return;for(const el of (scope||document).querySelectorAll('canvas[data-mat-icon]'))drawIcon(el,el.dataset.matIcon);}
-  return {interpolateGuideCamera,materialOutlineColors,styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode,boundsFor,makeProject};
+  return {interpolateGuideCamera,materialOutlineColors,styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode,boundsFor,makeProject,stepPlacement};
 });

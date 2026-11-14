@@ -75,6 +75,26 @@
     for(const b of blocks) {const n=itemCountForBlock(b);if(n)counts[b.type]=(counts[b.type]||0)+n;}
     return counts;
   }
+  // Distinguish the overall footprint from blocks actually occupying the lowest Y layer.
+  // The lowest layer may be sparse or below Y=0; never assume a filled rectangle.
+  function groundLayer(build) {
+    const source=Array.isArray(build?.blocks)?build.blocks:[];
+    const valid=source.filter(b=>Number.isInteger(b?.x)&&Number.isInteger(b?.y)&&Number.isInteger(b?.z));
+    if(!valid.length)return {y:null,width:0,depth:0,area:0,occupied:0,blocks:[]};
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,minZ=Infinity,maxZ=-Infinity;
+    for(const b of valid){
+      minX=Math.min(minX,b.x);maxX=Math.max(maxX,b.x);
+      minY=Math.min(minY,b.y);
+      minZ=Math.min(minZ,b.z);maxZ=Math.max(maxZ,b.z);
+    }
+    const floor=[],seen=new Set();
+    for(const b of valid)if(b.y===minY){
+      const key=b.x+','+b.z;
+      if(!seen.has(key)){seen.add(key);floor.push(b);}
+    }
+    const width=maxX-minX+1,depth=maxZ-minZ+1;
+    return {y:minY,width,depth,area:width*depth,occupied:floor.length,blocks:floor};
+  }
   function stepState(build,idx) {
     if(!Number.isInteger(idx)||idx<1||idx>build.steps.length) throw Error('Schritt außerhalb des gültigen Bereichs');
     const placed=build.steps.slice(0,idx).flatMap(s=>s.blocks);
@@ -215,5 +235,5 @@
       },'library',['bibliothek','innenraum','regale'])
   ];
   for(const build of builds)validateBuild(build);
-  return {MATERIALS,builds,generateSteps,countMaterials,stepState,stacks,validateBuild};
+  return {MATERIALS,builds,generateSteps,countMaterials,groundLayer,stepState,stacks,validateBuild};
 });
