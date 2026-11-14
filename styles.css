@@ -246,3 +246,25 @@ body.dark{--check-border:#e8efe9;--check-bg:#161917;--check-on:#90bd87;--check-i
 .material-row.checked .mat-name,.material-row.checked .mat-count,.material-row.checked canvas.mat-icon{opacity:.6}
 .material-row.checked .checkmark{background:var(--check-on);border-color:var(--check-on);color:var(--check-ink)}
 .material-row .checkmark svg{width:18px;height:18px;stroke-width:3.2}
+
+body[data-view="guide"]{--bg:#080808;--panel:#141414;--soft:#1b1b1d;--line:#2c2c2e;--ink:#f8f8f8;--muted:#aaa;background:var(--bg);color:var(--ink)}
+body[data-view="guide"] .topbar{background:#080808;color:#fff;border-color:transparent}
+body[data-view="guide"] .topbar .brand span{color:#f0a134}
+body[data-view="guide"] .craft-app-nav{display:none}
+.guide-layout.content{max-width:760px;margin:auto;padding:10px 16px 24px}
+.guide-layout .step-pill{background:#1b1b1d;color:#fff;border-radius:999px;padding:14px;text-align:center}
+.guide-layout>.progress-track,.guide-layout .guide-info{display:none}
+.guide-layout .guide-mode-switch{margin:8px 0 16px}
+.guide-layout .guide-image{margin-inline:-16px;border-radius:0;background:#17181a;aspect-ratio:1;max-height:55dvh;min-height:0}
+.guide-layout .guide-image canvas,.guide-layout .guide-image img{display:block;width:100%;height:100%;padding:0;max-height:none;object-fit:contain}
+.guide-layout .viewer-hint{display:none}
+.guide-layout .step-items,.immersive3d-materials{display:flex;gap:14px;overflow:auto;margin:6px 0 14px}
+.guide-block{display:grid;justify-items:center;gap:4px;min-width:40px;font-size:12px;color:#fff}
+.guide-block-icon{position:relative;display:block}
+.guide-block-icon::after{content:"";position:absolute;right:0;top:0;width:8px;height:8px;border-radius:50%;background:var(--block-outline)}
+.guide-block canvas.mat-icon{background:transparent!important;border:0!important}
+.guide-layout .nav-controls{position:sticky;bottom:0;z-index:4;background:#080808;padding:10px 0 max(10px,env(safe-area-inset-bottom));gap:14px}
+.guide-layout .nav-controls .primary{border-radius:999px;background:#f5f5f5;color:#141414;min-height:48px}
+.guide-extra{margin:10px 0;font-size:13px;color:var(--muted)}
+.image-mode .guide-extra{display:none}
+#step-image-dialog .guide-still{display:block;width:100%;height:min(72dvh,720px);background:#17181a}

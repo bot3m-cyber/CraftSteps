@@ -1,7 +1,7 @@
 /* CraftSteps Service Worker – Offline-Nutzung der App-Dateien.
    Netzwerk zuerst (immer aktuelle Version online), Cache als Fallback ohne Internet.
    Fremde Hosts (z. B. der Minecraft-Download) werden nie abgefangen. */
-const CACHE = 'craftsteps-v0.10.1';
+const CACHE = 'craftsteps-v0.10.3';
 const SHELL = [
   './', 'index.html', 'styles.css', 'app.js', 'core.js', 'schem.js', 'draft-store.js',
   'block-visuals.js', 'vanilla-assets.js', 'assets-ui.js', 'favicon.svg', 'manifest.json',

@@ -224,6 +224,12 @@
     ctx.restore();
   }
   function textureMode(){const info=assets()?.info();return info?.ready?'vanilla':info?.status==='loading'?'loading':'missing';}
+  function materialOutlineColors(blocks){
+    const palette=['#e73752','#167ac9','#198648','#9939c0','#be5e0c','#0c8587'];
+    const types=[...new Set(blocks.map(block=>typeof block==='string'?block: block.type || rawName(block)))];
+    const outlineColors=new Map(types.map((type,i)=>[type,palette[i]||'hsl('+((i*137.508)%360).toFixed(3)+', 78%, '+(i%2?34:44)+'%)']));
+    return outlineColors;
+  }
   function draw(canvas,build,opts={}){
     if(!canvas||!build||!canvas.getContext)return {rendered:0};
     const ctx=canvas.getContext('2d');if(!ctx)return {rendered:0};
@@ -233,7 +239,9 @@
     canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);
     ctx.imageSmoothingEnabled=false;
     if(!opts.transparent){
+      if(opts.guideStage){ctx.fillStyle='#17181a';ctx.fillRect(0,0,w,h);}else{
       const grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'#c8e1e9');grad.addColorStop(.64,'#e5edf0');grad.addColorStop(.641,'#b9d39b');grad.addColorStop(1,'#82a974');ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
+      }
     }else{ctx.clearRect(0,0,w,h);}
     const {project,depth,scale,yaw,pitch}=makeProject(w,h,build,{yaw:opts.yaw,pitch:opts.pitch,zoom:opts.icon?1.45:opts.zoom,focus:opts.followStep?opts.highlight:null,fromFocus:opts.followStep?opts.fromHighlight:null,focusBlend:opts.cameraBlend});
     const blocks=opts.blocks||build.blocks, highlighted=opts.highlight||[];
@@ -244,20 +252,18 @@
     const stepPositions=new Map(highlighted.map((b,index)=>[b.x+'|'+b.y+'|'+b.z,index]));
     const reveal=mathClamp(Number.isFinite(opts.stepReveal)?opts.stepReveal:1,0,1);
     if(!opts.transparent){const sx=build.width||1,sz=build.depth||1,grid=[];for(let a of [0,sx])for(let b of [0,sz])grid.push(project(a,-.02,b));
-      ctx.beginPath();let p=project(0,-.03,0);ctx.moveTo(p.x,p.y);for(let [a,b] of [[sx,0],[sx,sz],[0,sz],[0,0]]){p=project(a,-.03,b);ctx.lineTo(p.x,p.y);}ctx.fillStyle='rgba(110,159,93,.45)';ctx.fill();ctx.strokeStyle='rgba(70,110,68,.45)';ctx.lineWidth=.8;ctx.stroke();
+      ctx.beginPath();let p=project(0,-.03,0);ctx.moveTo(p.x,p.y);for(let [a,b] of [[sx,0],[sx,sz],[0,sz],[0,0]]){p=project(a,-.03,b);ctx.lineTo(p.x,p.y);}ctx.fillStyle=opts.guideStage?'#597e36':'rgba(110,159,93,.45)';ctx.fill();ctx.strokeStyle='rgba(70,110,68,.45)';ctx.lineWidth=.8;ctx.stroke();
       if(sx<=32&&sz<=32) {ctx.strokeStyle='rgba(58,93,62,.15)';ctx.lineWidth=.5;for(let x=0;x<=sx;x++){const a=project(x,0,0),b=project(x,0,sz);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}for(let z=0;z<=sz;z++){const a=project(0,0,z),b=project(sx,0,z);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}}
     const faces=[];
     const manager=assets(),ready=!!manager?.info().ready;
     if(ready)void manager.ensure(chosen).catch(e=>console.warn('Vanilla assets:',e));
     const chosenFull=new Set(chosen.filter(isFullCube).map(b=>`${b.x}|${b.y}|${b.z}`));
     const opaqueDirs={east:[1,0,0],west:[-1,0,0],top:[0,1,0],bottom:[0,-1,0],north:[0,0,-1],south:[0,0,1]};
-    const palette=['#e73752','#167ac9','#198648','#9939c0','#be5e0c','#0c8587'];
-    const types=[...new Set(highlighted.map(rawName))];
-    const outlineColors=new Map(types.map((type,i)=>[type,palette[i]||'hsl('+((i*137.508)%360).toFixed(3)+', 78%, '+(i%2?34:44)+'%)']));
+    const outlineColors=opts.outlineColors||materialOutlineColors(highlighted);
     let missing=0;
     for(const b of chosen){
       const index=stepPositions.get(b.x+'|'+b.y+'|'+b.z);
-      const outline=index===undefined?null:outlineColors.get(rawName(b));
+      const outline=index===undefined?null:outlineColors.get(b.type||rawName(b));
       const delay=(index||0)/Math.max(1,highlighted.length-1)*.48;
       const placement=opts.icon||index===undefined?1:mathClamp((reveal-delay)/.52,0,1);
       const appearing=placement<1;
@@ -313,5 +319,5 @@
     return draw(canvas,build,{icon:true,transparent:true,hideBadge:true});
   }
   function drawIcons(scope){if(typeof document==='undefined')return;for(const el of (scope||document).querySelectorAll('canvas[data-mat-icon]'))drawIcon(el,el.dataset.matIcon);}
-  return {styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode,boundsFor,makeProject};
+  return {materialOutlineColors,styleOf,colorFor,modelFor,parseProperties,draw,drawIcon,drawIcons,assetFacesFor,textureMode,boundsFor,makeProject};
 });
