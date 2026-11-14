@@ -245,9 +245,9 @@
   // All new blocks use the same eased placement curve, with a small stagger.
   function stepPlacement(reveal,index,total) {
     const t=mathClamp(Number.isFinite(reveal)?reveal:1,0,1);
-    const delay=Math.max(0,index)/Math.max(1,total-1)*.42;
-    const local=mathClamp((t-delay)/.58,0,1);
-    return 1-Math.pow(1-local,3);
+    const delay=Math.max(0,index)/Math.max(1,total-1)*.25;
+    const local=mathClamp((t-delay)/.75,0,1);
+    return 1-Math.pow(1-local,2);
   }
   function draw(canvas,build,opts={}){
     if(!canvas||!build||!canvas.getContext)return {rendered:0};
