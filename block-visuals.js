@@ -213,24 +213,11 @@
       }
     }return out;
   }
-  function drawOutline(ctx,block,project,scale,yaw,pitch,color){
-    const x=block.x,y=block.y,z=block.z;
-    const all=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]].map(([a,b,c])=>project(x+a,y+b,z+c));
-    const visibleFaces=[
-      {face:FACES[0],ids:[2,3,7,6]},
-      {face:FACES[1],ids:[0,4,5,1]},
-      {face:FACES[2],ids:[1,5,7,3]},
-      {face:FACES[3],ids:[4,0,2,6]},
-      {face:FACES[4],ids:[5,4,6,7]},
-      {face:FACES[5],ids:[0,1,3,2]}
-    ];
-    const seen=new Set(),edges=[];
-    for(const entry of visibleFaces){if(!faceVisible(entry.face,yaw,pitch))continue;for(let i=0;i<4;i++){
-      const a=entry.ids[i],b=entry.ids[(i+1)%4],key=a<b?`${a}-${b}`:`${b}-${a}`;
-      if(!seen.has(key)){seen.add(key);edges.push([a,b]);}
-    }}
-    ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
-    for(const [i,j] of edges){ctx.beginPath();ctx.moveTo(all[i].x,all[i].y);ctx.lineTo(all[j].x,all[j].y);ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=Math.max(2.4,Math.min(5,scale*.13));ctx.stroke();ctx.strokeStyle=color;ctx.lineWidth=Math.max(1.35,Math.min(3,scale*.073));ctx.stroke();}
+  function drawFaceOutline(ctx,poly,scale,color){
+    ctx.save();
+    ctx.lineJoin='round';
+    polygon(ctx,poly,'rgba(255,255,255,.92)',Math.max(2.4,Math.min(5,scale*.13)));
+    polygon(ctx,poly,color,Math.max(1.35,Math.min(3,scale*.073)));
     ctx.restore();
   }
   function textureMode(){const info=assets()?.info();return info?.ready?'vanilla':info?.status==='loading'?'loading':'missing';}
@@ -261,9 +248,12 @@
     if(ready)void manager.ensure(chosen).catch(e=>console.warn('Vanilla assets:',e));
     const chosenFull=new Set(chosen.filter(isFullCube).map(b=>`${b.x}|${b.y}|${b.z}`));
     const opaqueDirs={east:[1,0,0],west:[-1,0,0],top:[0,1,0],bottom:[0,-1,0],north:[0,0,-1],south:[0,0,1]};
+    const palette=['#e73752','#167ac9','#198648','#9939c0','#be5e0c','#0c8587'];
+    const types=[...new Set(highlighted.map(block=>block.type))];
     let missing=0;
     for(const b of chosen){
       const index=stepPositions.get(b.x+'|'+b.y+'|'+b.z);
+      const outline=index===undefined||index>=64?null:palette[types.indexOf(b.type)%palette.length];
       const delay=(index||0)/Math.max(1,highlighted.length-1)*.48;
       const placement=opts.icon||index===undefined?1:mathClamp((reveal-delay)/.52,0,1);
       const appearing=placement<1;
@@ -272,7 +262,7 @@
       const model=ready?manager.get(b):null;
       if(model?.length){
         const textured=assetFacesFor(rendered,model,project,depth,yaw,pitch,chosenFull);
-        if(appearing)for(const face of textured)face.alpha=opacity;
+        for(const face of textured){face.alpha=opacity;face.outline=outline;}
         faces.push(...textured);continue;
       }
       missing++;
@@ -283,20 +273,15 @@
         if(opaque&&chosenFull.has(`${b.x+d[0]}|${b.y+d[1]}|${b.z+d[2]}`))continue;
         const points=f.pts(part).map(v=>[v[0]+rendered.x,v[1]+rendered.y,v[2]+rendered.z]);
         const avg=points.reduce((sum,v)=>sum.map((n,i)=>n+v[i]/4),[0,0,0]);
-        faces.push({poly:points.map(p=>project(...p)),depth:depth(...avg),texture:null,type:rawName(b),id:f.id,alpha:opacity});
+        faces.push({poly:points.map(p=>project(...p)),depth:depth(...avg),texture:null,type:rawName(b),id:f.id,alpha:opacity,outline});
       }
     }
     faces.sort((a,b)=>a.depth-b.depth);
-    for(const f of faces){ctx.globalAlpha=f.alpha;drawTextureFace(ctx,f.poly,f.texture,f.id);}ctx.globalAlpha=1;
-    // Highlight is generated from the precise integer voxel coordinates, never AI image analysis.
-    const palette=['#e73752','#167ac9','#198648','#9939c0','#be5e0c','#0c8587'];
-    const types=[...new Set(highlighted.map(block=>block.type))];
-    for(const b of highlighted.slice(0,64)){
-      ctx.save();
-      // Exact red block-position outlines stay fixed even during placement animation.
-      ctx.globalAlpha=.82+.18*Math.sin(reveal*Math.PI/2);
-      drawOutline(ctx,b,project,scale,yaw,pitch,palette[types.indexOf(b.type)%palette.length]);
-      ctx.restore();
+    // Paint each outline with its face so closer blocks cover it naturally.
+    for(const face of faces){
+      ctx.globalAlpha=face.alpha;
+      drawTextureFace(ctx,face.poly,face.texture,face.id);
+      if(face.outline)drawFaceOutline(ctx,face.poly,scale,face.outline);
     }
     ctx.globalAlpha=1;
     if(!ready&&!opts.icon&&(opts.context==='guide'||opts.context==='hero')){
