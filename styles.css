@@ -228,3 +228,21 @@ body[data-view="onboarding"] #asset-manager{display:none!important}
 .image-mode .guide-image{aspect-ratio:auto;min-height:0;background:#f1f4f7}
 .step-picture{display:block;width:100%;height:min(55dvh,490px);object-fit:contain;padding:12px 12px 36px}
 #step-image-dialog img{display:block;width:100%;height:min(75dvh,680px);object-fit:contain;background:#f1f4f7;border-radius:8px}
+
+/* v0.10.1 Layout-Korrekturen */
+#offline-note{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:910px;margin:8px auto 0;padding:10px 14px;background:var(--soft);border:1px solid var(--line);border-radius:12px;font-size:13px;font-weight:700;color:var(--ink)}
+#offline-note[hidden]{display:none}
+#offline-note button{flex:0 0 auto;min-width:36px;min-height:36px;border:0;border-radius:8px;background:transparent;color:inherit;font-size:20px;line-height:1}
+#toast{bottom:calc(var(--nav-height) + 14px + env(safe-area-inset-bottom,0px))}
+body.imm-open #toast{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.guide-layout .step-pill,.guide-layout .guide-mode-switch{scroll-margin-top:80px}
+.image-mode .step-picture{width:100%;height:auto;max-height:min(68dvh,640px);object-fit:contain;padding:0;margin:0 auto}
+.image-mode .viewer-hint{position:static;display:block;margin:0;border-radius:0;background:#e6ebf0}
+#step-image-dialog img{width:100%;height:auto;max-height:min(80dvh,760px)}
+:root{--check-border:#1c2420;--check-bg:#fff;--check-on:#1f6f3a;--check-ink:#fff}
+body.dark{--check-border:#e8efe9;--check-bg:#161917;--check-on:#90bd87;--check-ink:#102014}
+.material-row .checkmark{width:26px;height:26px;flex:0 0 26px;border:2.5px solid var(--check-border);background:var(--check-bg);color:var(--check-ink)}
+.material-row.checked{opacity:1}
+.material-row.checked .mat-name,.material-row.checked .mat-count,.material-row.checked canvas.mat-icon{opacity:.6}
+.material-row.checked .checkmark{background:var(--check-on);border-color:var(--check-on);color:var(--check-ink)}
+.material-row .checkmark svg{width:18px;height:18px;stroke-width:3.2}
