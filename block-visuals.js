@@ -169,14 +169,20 @@
     }
     polygon(ctx,poly);ctx.save();ctx.clip();
     const im=texture.image,uv=texture.uv||[0,0,16,16],unit=im.width/16;
-    const x=uv[0]*unit,y=uv[1]*unit,w=(uv[2]-uv[0])*unit,h=(uv[3]-uv[1])*unit;
+    const x=Math.min(uv[0],uv[2])*unit,y=Math.min(uv[1],uv[3])*unit;
+    const w=Math.abs(uv[2]-uv[0])*unit,h=Math.abs(uv[3]-uv[1])*unit;
+    const mirrorU=uv[2]<uv[0],mirrorV=uv[3]<uv[1];
     if(w>0&&h>0){
       ctx.transform((poly[1].x-poly[0].x)/16,(poly[1].y-poly[0].y)/16,(poly[3].x-poly[0].x)/16,(poly[3].y-poly[0].y)/16,poly[0].x,poly[0].y);
       ctx.imageSmoothingEnabled=false;
       const rotation=((texture.rotation||0)%360+360)%360;
       if(rotation){ctx.translate(8,8);ctx.rotate(rotation*Math.PI/180);ctx.translate(-8,-8);}
+      if(mirrorU||mirrorV){
+        ctx.translate(mirrorU?16:0,mirrorV?16:0);
+        ctx.scale(mirrorU?-1:1,mirrorV?-1:1);
+      }
       ctx.drawImage(im,x,y,w,h,0,0,16,16);
-    }else{ctx.fillStyle='#bdc0c2';ctx.fillRect(0,0,16,16);}
+    }else{ctx.fillStyle=PLACEHOLDER_FACE[faceId]||'#aab2ae';ctx.fill();}
     ctx.restore();
     const shade=faceShade(faceId);if(shade){polygon(ctx,poly);ctx.fillStyle=`rgba(23,28,31,${shade})`;ctx.fill();}
     polygon(ctx,poly,'rgba(17,28,24,.18)',.45);
