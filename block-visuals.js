@@ -197,7 +197,10 @@
         const b=box(element.from[0]/16,element.from[1]/16,element.from[2]/16,element.to[0]/16,element.to[1]/16,element.to[2]/16);
         for(const [faceId,texture] of Object.entries(element.faces)){
           const face=FACES_BY_NAME[faceId];if(!face||!texture)continue;
-          let vertices=face.pts(b),normal=face.normal.slice();
+          const corners=face.pts(b);
+          // UVs start at the upper-left of a side face, before model rotations.
+          const start=faceId==='up'?0:faceId==='down'?1:2;
+          let vertices=corners.slice(start).concat(corners.slice(0,start)),normal=face.normal.slice();
           if(element.rotation){const origin=(element.rotation.origin||[8,8,8]).map(x=>x/16);
             vertices=vertices.map(v=>rotatePoint(v,element.rotation.axis,element.rotation.angle,origin));
             normal=rotatePoint(normal,element.rotation.axis,element.rotation.angle,[0,0,0]);}
@@ -216,8 +219,8 @@
   function drawFaceOutline(ctx,poly,scale,color){
     ctx.save();
     ctx.lineJoin='round';
-    polygon(ctx,poly,'rgba(255,255,255,.92)',Math.max(2.4,Math.min(5,scale*.13)));
-    polygon(ctx,poly,color,Math.max(1.35,Math.min(3,scale*.073)));
+    polygon(ctx,poly,'rgba(255,255,255,.92)',Math.max(1.15,Math.min(2.2,scale*.06)));
+    polygon(ctx,poly,color,Math.max(.65,Math.min(1.4,scale*.037)));
     ctx.restore();
   }
   function textureMode(){const info=assets()?.info();return info?.ready?'vanilla':info?.status==='loading'?'loading':'missing';}
@@ -249,11 +252,12 @@
     const chosenFull=new Set(chosen.filter(isFullCube).map(b=>`${b.x}|${b.y}|${b.z}`));
     const opaqueDirs={east:[1,0,0],west:[-1,0,0],top:[0,1,0],bottom:[0,-1,0],north:[0,0,-1],south:[0,0,1]};
     const palette=['#e73752','#167ac9','#198648','#9939c0','#be5e0c','#0c8587'];
-    const types=[...new Set(highlighted.map(block=>block.type))];
+    const types=[...new Set(highlighted.map(rawName))];
+    const outlineColors=new Map(types.map((type,i)=>[type,palette[i]||'hsl('+((i*137.508)%360).toFixed(3)+', 78%, '+(i%2?34:44)+'%)']));
     let missing=0;
     for(const b of chosen){
       const index=stepPositions.get(b.x+'|'+b.y+'|'+b.z);
-      const outline=index===undefined||index>=64?null:palette[types.indexOf(b.type)%palette.length];
+      const outline=index===undefined?null:outlineColors.get(rawName(b));
       const delay=(index||0)/Math.max(1,highlighted.length-1)*.48;
       const placement=opts.icon||index===undefined?1:mathClamp((reveal-delay)/.52,0,1);
       const appearing=placement<1;
