@@ -268,3 +268,21 @@ body[data-view="guide"] .craft-app-nav{display:none}
 .guide-extra{margin:10px 0;font-size:13px;color:var(--muted)}
 .image-mode .guide-extra{display:none}
 #step-image-dialog .guide-still{display:block;width:100%;height:min(72dvh,720px);background:#17181a}
+
+body[data-view="home"]:not(.dark){--bg:#f5f4f0;--panel:#fff;--soft:#ebeae6;--line:#e5e3dd}
+body[data-view="home"] .topbar{background:var(--bg)}
+body[data-view="home"] .topbar .brand{font-weight:1000;letter-spacing:-.045em;text-shadow:0 1px 0 #9a581e}
+body[data-view="home"] .topbar .brand small{display:none}
+body[data-view="home"] .catalog{max-width:1360px;margin:auto;padding-inline:clamp(14px,4.7vw,64px)}
+body[data-view="home"] .catalog .category-rail{order:-3;margin-bottom:12px;scrollbar-width:none}
+.catalog .category-pill{white-space:nowrap;border:0}
+.catalog .category-pill.active{box-shadow:none}
+body[data-view="home"] .catalog .gallery-filters{order:-1;margin:3px 0 24px}
+.catalog .gallery{gap:24px 12px}
+.catalog .art-button{aspect-ratio:4/5;border:0;border-radius:14px}
+.catalog .art-button canvas{height:100%;width:100%;display:block}
+.catalog .card-sub{display:block}
+.catalog .difficulty{display:none}
+.catalog .card-label{color:var(--ink)}
+.catalog-tools{margin-top:20px;border-top:1px solid var(--line);padding-top:12px}
+.catalog-tools summary{cursor:pointer;font-weight:700;margin-bottom:12px}
