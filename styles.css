@@ -318,3 +318,9 @@ body[data-view="home"] .catalog .gallery-filters{order:-1;margin:3px 0 24px}
 .settings-page{max-width:740px;margin:auto}
 .settings-page .settings-group{border-radius:16px}
 .settings-page .settings-line{min-height:60px}
+
+/* Lowest occupied layer: distinguish a footprint's available positions from real blocks. */
+.foundation-summary{display:grid;gap:6px;margin:12px 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text)}
+.foundation-summary strong{font-weight:750}
+.foundation-summary span{font-size:.94rem;font-weight:650}
+.foundation-summary small{color:var(--muted);line-height:1.45}
