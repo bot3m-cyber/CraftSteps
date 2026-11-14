@@ -6,7 +6,15 @@
   <meta name="theme-color" content="#161c1a">
   <title>CraftSteps – Bildanleitung</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="image-guides.css">
+  <script>
+    try {
+      if (JSON.parse(localStorage.getItem('craftsteps:theme')) === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+        document.querySelector('meta[name="theme-color"]').content = '#161917';
+      }
+    } catch { /* Storage can be unavailable in private browsing. */ }
+  </script>
+  <link rel="stylesheet" href="image-guides.css?v=0.10.7">
 </head>
 <body>
   <header class="img-topbar"><a href="image-studio.html" class="img-back">← Meine Anleitungen</a><strong class="img-logo">CRAFT<span>STEPS</span></strong><span class="img-chip">BILDGUIDE</span></header>

@@ -7,7 +7,15 @@
   <meta name="description" content="CraftSteps Bildstudio: Minecraft-Bauanleitungen aus eigenen Schrittbildern erstellen.">
   <title>CraftSteps – Bildanleitung erstellen</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="image-guides.css">
+  <script>
+    try {
+      if (JSON.parse(localStorage.getItem('craftsteps:theme')) === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+        document.querySelector('meta[name="theme-color"]').content = '#161917';
+      }
+    } catch { /* Storage can be unavailable in private browsing. */ }
+  </script>
+  <link rel="stylesheet" href="image-guides.css?v=0.10.7">
 </head>
 <body>
   <header class="img-topbar"><a href="index.html" class="img-back">← CraftSteps</a><strong class="img-logo">CRAFT<span>STEPS</span></strong><span class="img-chip">BILDSTUDIO</span></header>
